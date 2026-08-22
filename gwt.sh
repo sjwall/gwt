@@ -16,11 +16,7 @@ gwt() {
   case "$1" in
     remove|rm)
       shift
-      local name="" flags=()
-      for a in "$@"; do
-        [[ "$a" == -* ]] && flags+=("$a") || name ="$a"
-      done
-      git worktree remove "${flags[@]}" "../gwt-${dir_name}/${name}"
+      git worktree remove $@
       ;;
     pull|p)
       git fetch origin "$2"

@@ -2,6 +2,13 @@
 
 A git worktree helper...
 
+== Installation
+
+[source,sh]
+----
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh
+----
+
 == Commands
 
 * `gwt [add] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch `nvim`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.

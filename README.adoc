@@ -1,3 +1,16 @@
 = gwt
 
 A git worktree helper...
+
+== Commands
+
+* `gwt [add] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch `nvim`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
+* `gwt pull <name>` / `gwt p <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, nvim.
+* `gwt cd <name>`: Switch to a worktree matching `<name>` (searches current repository and all tracked repositories).
+* `gwt remove <name>` / `gwt rm <name>`: Remove worktree `<name>` (`-f` or `-force` supported).
+
+== Configuration
+
+* Tracked repositories are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`.
+* Custom worktree parent locations for repositories in unsuitable paths are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/locations`.
+

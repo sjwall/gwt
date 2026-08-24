@@ -10,37 +10,61 @@
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local dir_name=$(basename "$PWD")
-  local init_ide=false
   local dir_gwt="../gwt-${dir_name}"
-  mkdir -p "$dir_gwt"
-  case "$1" in
-    remove|rm)
-      shift
-      git worktree remove $@
-      ;;
-    pull|p)
-      git fetch origin "$2"
-      local dest="$dir_gwt/$2"
-      git worktree add -b "$2" "$dest" "origin/$2"
-      cd "$dest"
-      init_ide=true
-      ;;
-    *)
-      if [[ $# -ne 1 ]]; then
-        echo "gwt: unknown command: $*" >&2
-        return 1
-      fi
-      local dest="$dir_gwt/$1"
-      git worktree add "$dest"
-      cd "$dest"
-      init_ide=true
-      ;;
-  esac
-  if $init_ide; then
+
+  _gwt_remove() {
+    git worktree remove "$@"
+  }
+
+  _gwt_pull() {
+    if [[ $# -ne 1 ]]; then
+      echo "gwt: unknown command: pull $*" >&2
+      return 1
+    fi
+    local branch="$1"
+    git fetch origin "$branch"
+    local dest="$dir_gwt/$branch"
+    git worktree add -b "$branch" "$dest" "origin/$branch"
+    cd "$dest"
+    _gwt_init_ide
+  }
+
+  _gwt_create() {
+    if [[ $# -ne 1 ]]; then
+      echo "gwt: unknown command: $*" >&2
+      return 1
+    fi
+    local branch="$1"
+    local dest="$dir_gwt/$branch"
+    git worktree add "$dest"
+    cd "$dest"
+    _gwt_init_ide
+  }
+
+  _gwt_init_ide() {
     if [ -f yarn.lock ]; then
       yarn
     fi
     nvim
-  fi
+  }
+
+  {
+    mkdir -p "$dir_gwt"
+    case "$1" in
+      remove|rm)
+        shift
+        _gwt_remove "$@"
+        ;;
+      pull|p)
+        shift
+        _gwt_pull "$@"
+        ;;
+      *)
+        _gwt_create "$@"
+        ;;
+    esac
+  } always {
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide 2>/dev/null
+  }
 }
 

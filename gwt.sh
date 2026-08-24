@@ -1,15 +1,15 @@
 #!/bin/zsh
 # git worktree helper
-#  gwt [add] NAME         create worktree ../gwt-<dir-name>/NAME, cd, yarn, launch IDE
-#  gwt pull NAME          fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
-#  gwt p NAME             as above
-#  gwt cd NAME            cd to worktree matching NAME
-#  gwt remove NAME        remove worktree ../gwt-<dir-name>/NAME
-#  gwt rm NAME            as above
-#  gwt rm -force NAME     as above but with force
-#  gwt rm -f NAME         as above
-#  gwt config [KEY] [VAL] get or set configuration (e.g. gwt config ide code)
-#  gwt ide [NAME]         get or set configured IDE (defaults to nvim)
+#  gwt [add] [--ide IDE] NAME  create worktree ../gwt-<dir-name>/NAME, cd, yarn, launch IDE
+#  gwt pull [--ide IDE] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
+#  gwt p NAME                  as above
+#  gwt cd NAME                 cd to worktree matching NAME
+#  gwt remove NAME             remove worktree ../gwt-<dir-name>/NAME
+#  gwt rm NAME                 as above
+#  gwt rm -force NAME          as above but with force
+#  gwt rm -f NAME              as above
+#  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
+#  gwt ide [NAME]              get or set configured IDE (defaults to nvim)
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -289,11 +289,36 @@ gwt() {
   }
 
   _gwt_pull() {
-    if [[ $# -ne 1 ]]; then
-      echo "gwt: unknown command: pull $*" >&2
+    local override_ide=""
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --ide=*)
+          override_ide="${1#--ide=}"
+          shift
+          ;;
+        --ide)
+          if [[ $# -lt 2 ]]; then
+            echo "gwt: --ide requires an argument" >&2
+            return 1
+          fi
+          override_ide="$2"
+          shift 2
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [[ ${#args[@]} -ne 1 ]]; then
+      echo "gwt: unknown command: pull ${args[*]}" >&2
       return 1
     fi
-    local branch="$1"
+
+    local branch="${args[1]}"
     local dir_gwt
     dir_gwt=$(_gwt_get_dir_gwt) || return 1
     mkdir -p "$dir_gwt"
@@ -301,22 +326,47 @@ gwt() {
     local dest="$dir_gwt/$branch"
     git worktree add -b "$branch" "$dest" "origin/$branch"
     cd "$dest"
-    _gwt_init_ide
+    _gwt_init_ide "$override_ide"
   }
 
   _gwt_create() {
-    if [[ $# -ne 1 ]]; then
-      echo "gwt: unknown command: $*" >&2
+    local override_ide=""
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --ide=*)
+          override_ide="${1#--ide=}"
+          shift
+          ;;
+        --ide)
+          if [[ $# -lt 2 ]]; then
+            echo "gwt: --ide requires an argument" >&2
+            return 1
+          fi
+          override_ide="$2"
+          shift 2
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [[ ${#args[@]} -ne 1 ]]; then
+      echo "gwt: unknown command: ${args[*]}" >&2
       return 1
     fi
-    local branch="$1"
+
+    local branch="${args[1]}"
     local dir_gwt
     dir_gwt=$(_gwt_get_dir_gwt) || return 1
     mkdir -p "$dir_gwt"
     local dest="$dir_gwt/$branch"
     git worktree add "$dest"
     cd "$dest"
-    _gwt_init_ide
+    _gwt_init_ide "$override_ide"
   }
 
   _gwt_config() {
@@ -418,11 +468,14 @@ gwt() {
   }
 
   _gwt_init_ide() {
+    local override_ide="$1"
     if [ -f yarn.lock ]; then
       yarn
     fi
-    local ide_cmd
-    ide_cmd=$(_gwt_get_ide)
+    local ide_cmd="${override_ide:-$(_gwt_get_ide)}"
+    if [[ "${ide_cmd:l}" == "none" ]]; then
+      return 0
+    fi
     eval "$ide_cmd"
   }
 

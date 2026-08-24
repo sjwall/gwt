@@ -11,8 +11,8 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 
 == Commands
 
-* `gwt [add] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`). If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
-* `gwt pull <name>` / `gwt p <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, launch the configured IDE.
+* `gwt [add] [--ide <ide>] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`). Use `--ide <ide>` to override the IDE for this run only, or `--ide none` to skip launching the IDE. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
+* `gwt pull [--ide <ide>] <name>` / `gwt p [--ide <ide>] <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, launch configured IDE (supports `--ide <ide>` or `--ide none`).
 * `gwt cd <name>`: Switch to a worktree matching `<name>` (searches current repository and all tracked repositories).
 * `gwt remove <name>` / `gwt rm <name>`: Remove worktree `<name>` (`-f` or `-force` supported).
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.

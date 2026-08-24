@@ -11,13 +11,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 
 == Commands
 
-* `gwt [add] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch `nvim`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
-* `gwt pull <name>` / `gwt p <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, nvim.
+* `gwt [add] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`). If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
+* `gwt pull <name>` / `gwt p <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, launch the configured IDE.
 * `gwt cd <name>`: Switch to a worktree matching `<name>` (searches current repository and all tracked repositories).
 * `gwt remove <name>` / `gwt rm <name>`: Remove worktree `<name>` (`-f` or `-force` supported).
+* `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
 
 == Configuration
 
 * Tracked repositories are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`.
 * Custom worktree parent locations for repositories in unsuitable paths are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/locations`.
+* Configuration settings are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/config`.
 

@@ -1,13 +1,15 @@
 #!/bin/zsh
 # git worktree helper
-#  gwt [add] NAME      create worktree ../gwt-<dir-name>/NAME, cd, yarn, nvim
-#  gwt pull NAME       fetch origin/NAME, create tracking worktree, cd, yarn, nvim
-#  gwt p NAME          as above
-#  gwt cd NAME         cd to worktree matching NAME
-#  gwt remove NAME     remove worktree ../gwt-<dir-name>/NAME
-#  gwt rm NAME         as above
-#  gwt rm -force NAME  as above but with force
-#  gwt rm -f NAME      as above
+#  gwt [add] NAME         create worktree ../gwt-<dir-name>/NAME, cd, yarn, launch IDE
+#  gwt pull NAME          fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
+#  gwt p NAME             as above
+#  gwt cd NAME            cd to worktree matching NAME
+#  gwt remove NAME        remove worktree ../gwt-<dir-name>/NAME
+#  gwt rm NAME            as above
+#  gwt rm -force NAME     as above but with force
+#  gwt rm -f NAME         as above
+#  gwt config [KEY] [VAL] get or set configuration (e.g. gwt config ide code)
+#  gwt ide [NAME]         get or set configured IDE (defaults to nvim)
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -86,6 +88,91 @@ gwt() {
       mv "$temp_file" "$locations_file"
     else
       echo "$repo=$safe_parent" >> "$locations_file"
+    fi
+  }
+
+  _gwt_get_config() {
+    local target_key="$1"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local config_file="$config_dir/config"
+    if [[ -f "$config_file" ]]; then
+      local line key val
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        if [[ "$line" == *"="* ]]; then
+          key="${line%%=*}"
+          val="${line#*=}"
+          if [[ "$key" == "$target_key" ]]; then
+            echo "$val"
+            return 0
+          fi
+        fi
+      done < "$config_file"
+    fi
+    return 1
+  }
+
+  _gwt_save_config() {
+    local target_key="$1"
+    local target_val="$2"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local config_file="$config_dir/config"
+    mkdir -p "$config_dir"
+    if [[ -f "$config_file" ]]; then
+      local temp_file="${config_file}.tmp.$$"
+      touch "$temp_file"
+      local found=0
+      local line key
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" == *"="* && "$line" != \#* ]]; then
+          key="${line%%=*}"
+          if [[ "$key" == "$target_key" ]]; then
+            echo "$target_key=$target_val" >> "$temp_file"
+            found=1
+            continue
+          fi
+        fi
+        echo "$line" >> "$temp_file"
+      done < "$config_file"
+      if [[ $found -eq 0 ]]; then
+        echo "$target_key=$target_val" >> "$temp_file"
+      fi
+      mv "$temp_file" "$config_file"
+    else
+      echo "$target_key=$target_val" >> "$config_file"
+    fi
+  }
+
+  _gwt_unset_config() {
+    local target_key="$1"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local config_file="$config_dir/config"
+    if [[ -f "$config_file" ]]; then
+      local temp_file="${config_file}.tmp.$$"
+      touch "$temp_file"
+      local line key
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" == *"="* && "$line" != \#* ]]; then
+          key="${line%%=*}"
+          if [[ "$key" == "$target_key" ]]; then
+            continue
+          fi
+        fi
+        echo "$line" >> "$temp_file"
+      done < "$config_file"
+      mv "$temp_file" "$config_file"
+    fi
+  }
+
+  _gwt_get_ide() {
+    local ide
+    ide=$(_gwt_get_config "ide")
+    if [[ -n "$ide" ]]; then
+      echo "$ide"
+    elif [[ -n "$GWT_IDE" ]]; then
+      echo "$GWT_IDE"
+    else
+      echo "nvim"
     fi
   }
 
@@ -232,15 +319,127 @@ gwt() {
     _gwt_init_ide
   }
 
+  _gwt_config() {
+    if [[ $# -eq 0 ]]; then
+      local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+      local config_file="$config_dir/config"
+      local has_ide=0
+      if [[ -f "$config_file" ]]; then
+        local line key
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          [[ -z "$line" || "$line" == \#* ]] && continue
+          if [[ "$line" == *"="* ]]; then
+            key="${line%%=*}"
+            if [[ "$key" == "ide" ]]; then
+              has_ide=1
+            fi
+          fi
+          echo "$line"
+        done < "$config_file"
+      fi
+      if [[ $has_ide -eq 0 ]]; then
+        echo "ide=nvim (default)"
+      fi
+      return 0
+    fi
+
+    case "$1" in
+      get)
+        shift
+        if [[ $# -ne 1 ]]; then
+          echo "gwt: usage: gwt config get <key>" >&2
+          return 1
+        fi
+        local key="$1"
+        if [[ "$key" == "ide" ]]; then
+          _gwt_get_ide
+          return 0
+        fi
+        local val
+        val=$(_gwt_get_config "$key")
+        if [[ -n "$val" ]]; then
+          echo "$val"
+          return 0
+        else
+          echo "gwt: config key '$key' not found" >&2
+          return 1
+        fi
+        ;;
+      set)
+        shift
+        if [[ $# -lt 2 ]]; then
+          echo "gwt: usage: gwt config set <key> <value>" >&2
+          return 1
+        fi
+        local key="$1"
+        shift
+        local val="$*"
+        _gwt_save_config "$key" "$val"
+        echo "gwt: set $key to $val"
+        return 0
+        ;;
+      unset|--unset|remove|rm)
+        shift
+        if [[ $# -ne 1 ]]; then
+          echo "gwt: usage: gwt config unset <key>" >&2
+          return 1
+        fi
+        local key="$1"
+        _gwt_unset_config "$key"
+        echo "gwt: unset $key"
+        return 0
+        ;;
+      *)
+        if [[ $# -eq 1 ]]; then
+          local key="$1"
+          if [[ "$key" == "ide" ]]; then
+            _gwt_get_ide
+            return 0
+          fi
+          local val
+          val=$(_gwt_get_config "$key")
+          if [[ -n "$val" ]]; then
+            echo "$val"
+            return 0
+          else
+            echo "gwt: config key '$key' not found" >&2
+            return 1
+          fi
+        else
+          local key="$1"
+          shift
+          local val="$*"
+          _gwt_save_config "$key" "$val"
+          echo "gwt: set $key to $val"
+          return 0
+        fi
+        ;;
+    esac
+  }
+
   _gwt_init_ide() {
     if [ -f yarn.lock ]; then
       yarn
     fi
-    nvim
+    local ide_cmd
+    ide_cmd=$(_gwt_get_ide)
+    eval "$ide_cmd"
   }
 
   {
     case "$1" in
+      config)
+        shift
+        _gwt_config "$@"
+        ;;
+      ide)
+        shift
+        if [[ $# -eq 0 ]]; then
+          _gwt_config get ide
+        else
+          _gwt_config set ide "$@"
+        fi
+        ;;
       cd)
         shift
         _gwt_cd "$@"
@@ -262,7 +461,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_cd _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_cd _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
   }
 }
 

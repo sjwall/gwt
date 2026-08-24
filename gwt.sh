@@ -12,6 +12,16 @@ gwt() {
   local dir_name=$(basename "$PWD")
   local dir_gwt="../gwt-${dir_name}"
 
+  local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
+  if [[ -n "$main_repo" ]]; then
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local repos_file="$config_dir/repos"
+    mkdir -p "$config_dir"
+    if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$main_repo" "$repos_file" 2>/dev/null; then
+      echo "$main_repo" >> "$repos_file"
+    fi
+  fi
+
   _gwt_remove() {
     git worktree remove "$@"
   }

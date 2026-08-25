@@ -7,10 +7,10 @@
 #  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
 #  gwt s NAME                  as above
 #  gwt ls                      list all tracked worktrees
-#  gwt remove NAME             remove worktree ../gwt-<dir-name>/NAME
-#  gwt rm NAME                 as above
-#  gwt rm -force NAME          as above but with force
-#  gwt rm -f NAME              as above
+#  gwt remove [NAME]           remove worktree (defaults to current worktree, cd to main repo)
+#  gwt rm [NAME]               as above
+#  gwt rm -force [NAME]        as above but with force
+#  gwt rm -f [NAME]            as above
 #  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
 #  gwt ide [NAME]              get or set configured IDE (defaults to nvim)
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
@@ -355,7 +355,64 @@ gwt() {
   }
 
   _gwt_remove() {
-    git worktree remove "$@"
+    local flags=()
+    local targets=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        -f|--force|-force)
+          flags+=(--force)
+          shift
+          ;;
+        *)
+          targets+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [[ -z "$main_repo" ]]; then
+      git worktree remove "${flags[@]}" "${targets[@]}"
+      return $?
+    fi
+
+    local current_wt=$(git rev-parse --show-toplevel 2>/dev/null)
+    local is_linked_worktree=0
+    if [[ -n "$current_wt" && "$current_wt" != "$main_repo" ]] || [[ "$(git rev-parse --git-dir 2>/dev/null)" != "$(git rev-parse --git-common-dir 2>/dev/null)" ]]; then
+      is_linked_worktree=1
+    fi
+
+    if [[ ${#targets[@]} -eq 0 ]]; then
+      if [[ $is_linked_worktree -eq 1 ]]; then
+        targets=("$current_wt")
+      else
+        echo "gwt: cannot remove main repository; please specify a worktree" >&2
+        return 1
+      fi
+    else
+      local resolved_targets=()
+      local t
+      for t in "${targets[@]}"; do
+        if [[ -d "$t" ]]; then
+          resolved_targets+=("$(cd "$t" 2>/dev/null && pwd -P)")
+        else
+          resolved_targets+=("$t")
+        fi
+      done
+      targets=("${resolved_targets[@]}")
+    fi
+
+    local orig_pwd="$PWD"
+    if [[ $is_linked_worktree -eq 1 ]] || [[ "$PWD" != "$main_repo" ]]; then
+      cd "$main_repo" || return 1
+    fi
+
+    if ! git worktree remove "${flags[@]}" "${targets[@]}"; then
+      if [[ "$PWD" != "$orig_pwd" ]]; then
+        cd "$orig_pwd" 2>/dev/null
+      fi
+      return 1
+    fi
   }
 
   _gwt_pull() {

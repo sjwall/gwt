@@ -16,7 +16,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * `gwt cd <name>`: Switch to a worktree matching `<name>` (searches current repository and all tracked repositories).
 * `gwt switch [--ide <ide>] <name>` / `gwt s [--ide <ide>] <name>`: Switch to a worktree matching `<name>` and launch configured IDE (supports `--ide <ide>` or `--ide none`).
 * `gwt ls` / `gwt list`: List all tracked worktrees.
-* `gwt remove <name>` / `gwt rm <name>`: Remove worktree `<name>` (`-f` or `-force` supported).
+* `gwt remove [<name>]` / `gwt rm [<name>]` / `gwt r [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
 
 == Configuration

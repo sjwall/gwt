@@ -69,12 +69,17 @@ gwt list
 ```
 
 ### 5. Remove a Worktree
-Deletes the specified worktree.
+Deletes the specified worktree or the current worktree if run from within one (automatically changes directory to the main repository before removal).
 
 ```bash
+# When inside a worktree, remove the current worktree:
+gwt rm
+
+# Remove a specific worktree by name:
 gwt rm <worktree-name>
 
 # Force removal if worktree has uncommitted changes or untracked files:
+gwt rm -f
 gwt rm -f <worktree-name>
 ```
 

@@ -4,6 +4,7 @@
 #  gwt pull [--ide IDE] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
 #  gwt p NAME                  as above
 #  gwt cd NAME                 cd to worktree matching NAME
+#  gwt ls                      list all tracked worktrees
 #  gwt remove NAME             remove worktree ../gwt-<dir-name>/NAME
 #  gwt rm NAME                 as above
 #  gwt rm -force NAME          as above but with force
@@ -288,6 +289,34 @@ gwt() {
     return 1
   }
 
+  _gwt_ls() {
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local repos_file="$config_dir/repos"
+    local repo_list=()
+
+    if [[ -n "$main_repo" ]]; then
+      repo_list+=("$main_repo")
+    fi
+
+    if [[ -f "$repos_file" ]]; then
+      local r
+      while IFS= read -r r || [[ -n "$r" ]]; do
+        [[ -z "$r" ]] && continue
+        repo_list+=("$r")
+      done < "$repos_file"
+    fi
+
+    local -A seen
+    local repo
+    for repo in "${repo_list[@]}"; do
+      [[ -z "$repo" || ! -d "$repo" ]] && continue
+      [[ -n "${seen[$repo]}" ]] && continue
+      seen[$repo]=1
+      git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
+      git -C "$repo" worktree list "$@"
+    done
+  }
+
   _gwt_remove() {
     git worktree remove "$@"
   }
@@ -501,6 +530,10 @@ gwt() {
         shift
         _gwt_cd "$@"
         ;;
+      list|ls)
+        shift
+        _gwt_ls "$@"
+        ;;
       remove|rm)
         shift
         _gwt_remove "$@"
@@ -518,7 +551,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_cd _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_cd _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
   }
 }
 

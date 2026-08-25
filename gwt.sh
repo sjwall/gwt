@@ -4,6 +4,8 @@
 #  gwt pull [--ide IDE] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
 #  gwt p NAME                  as above
 #  gwt cd NAME                 cd to worktree matching NAME
+#  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
+#  gwt s NAME                  as above
 #  gwt ls                      list all tracked worktrees
 #  gwt remove NAME             remove worktree ../gwt-<dir-name>/NAME
 #  gwt rm NAME                 as above
@@ -289,6 +291,41 @@ gwt() {
     return 1
   }
 
+  _gwt_switch() {
+    local override_ide=""
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --ide=*)
+          override_ide="${1#--ide=}"
+          shift
+          ;;
+        --ide)
+          if [[ $# -lt 2 ]]; then
+            echo "gwt: --ide requires an argument" >&2
+            return 1
+          fi
+          override_ide="$2"
+          shift 2
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [[ ${#args[@]} -ne 1 ]]; then
+      echo "gwt: unknown command: switch ${args[*]}" >&2
+      return 1
+    fi
+
+    local query="${args[1]}"
+    _gwt_cd "$query" || return 1
+    _gwt_launch_ide "$override_ide"
+  }
+
   _gwt_ls() {
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
     local repos_file="$config_dir/repos"
@@ -500,16 +537,21 @@ gwt() {
     esac
   }
 
-  _gwt_init_ide() {
+  _gwt_launch_ide() {
     local override_ide="$1"
-    if [ -f yarn.lock ]; then
-      yarn
-    fi
     local ide_cmd="${override_ide:-$(_gwt_get_ide)}"
     if [[ "${ide_cmd:l}" == "none" ]]; then
       return 0
     fi
     eval "$ide_cmd"
+  }
+
+  _gwt_init_ide() {
+    local override_ide="$1"
+    if [ -f yarn.lock ]; then
+      yarn
+    fi
+    _gwt_launch_ide "$override_ide"
   }
 
   {
@@ -525,6 +567,10 @@ gwt() {
         else
           _gwt_config set ide "$@"
         fi
+        ;;
+      switch|s)
+        shift
+        _gwt_switch "$@"
         ;;
       cd)
         shift
@@ -551,7 +597,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_cd _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
   }
 }
 

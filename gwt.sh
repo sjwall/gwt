@@ -241,9 +241,11 @@ gwt() {
       _gwt_find_worktrees "$main_repo"
       if [[ ${#exact_matches[@]} -eq 1 ]]; then
         cd "${exact_matches[1]}"
+        echo "${exact_matches[1]}"
         return 0
       elif [[ ${#matches[@]} -eq 1 ]]; then
         cd "${matches[1]}"
+        echo "${matches[1]}"
         return 0
       elif [[ ${#matches[@]} -gt 1 ]]; then
         echo "gwt: multiple worktrees match '$query':" >&2
@@ -266,9 +268,11 @@ gwt() {
         _gwt_find_worktrees "${other_repos[@]}"
         if [[ ${#exact_matches[@]} -eq 1 ]]; then
           cd "${exact_matches[1]}"
+          echo "${exact_matches[1]}"
           return 0
         elif [[ ${#matches[@]} -eq 1 ]]; then
           cd "${matches[1]}"
+          echo "${matches[1]}"
           return 0
         elif [[ ${#matches[@]} -gt 1 ]]; then
           echo "gwt: multiple worktrees match '$query':" >&2

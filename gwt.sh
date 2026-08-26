@@ -4,6 +4,8 @@
 #  gwt pull [--ide IDE] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
 #  gwt p NAME                  as above
 #  gwt cd NAME                 cd to worktree matching NAME
+#  gwt main [NAME]             cd to main repository matching NAME (defaults to main repo of current worktree)
+#  gwt m [NAME]                as above
 #  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
 #  gwt s NAME                  as above
 #  gwt ls                      list all tracked worktrees
@@ -288,6 +290,96 @@ gwt() {
     fi
 
     echo "gwt: no matching worktree found for '$query'" >&2
+    return 1
+  }
+
+  _gwt_main() {
+    local query="$1"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local repos_file="$config_dir/repos"
+
+    if [[ $# -eq 0 ]]; then
+      if [[ -n "$main_repo" ]]; then
+        cd "$main_repo"
+        echo "$main_repo"
+        return 0
+      else
+        echo "gwt: no matching repository found" >&2
+        return 1
+      fi
+    elif [[ $# -gt 1 ]]; then
+      echo "gwt: unknown command: main $*" >&2
+      return 1
+    fi
+
+    local repo_list=()
+    if [[ -n "$main_repo" ]]; then
+      repo_list+=("$main_repo")
+    fi
+
+    if [[ -f "$repos_file" ]]; then
+      local r
+      while IFS= read -r r || [[ -n "$r" ]]; do
+        [[ -z "$r" ]] && continue
+        repo_list+=("$r")
+      done < "$repos_file"
+    fi
+
+    local -A seen
+    local repo repo_name
+    local exact_matches=()
+    local matches=()
+    local path_matches=()
+
+    for repo in "${repo_list[@]}"; do
+      [[ -z "$repo" || ! -d "$repo" ]] && continue
+      [[ -n "${seen[$repo]}" ]] && continue
+      seen[$repo]=1
+
+      repo_name=$(basename "$repo")
+      if [[ "${repo_name:l}" == "${query:l}" ]]; then
+        exact_matches+=("$repo")
+      fi
+      if [[ "${repo_name:l}" == *"${query:l}"* ]]; then
+        matches+=("$repo")
+      elif [[ "${repo:l}" == *"${query:l}"* ]]; then
+        path_matches+=("$repo")
+      fi
+    done
+
+    if [[ ${#exact_matches[@]} -eq 1 ]]; then
+      cd "${exact_matches[1]}"
+      echo "${exact_matches[1]}"
+      return 0
+    elif [[ ${#exact_matches[@]} -gt 1 ]]; then
+      echo "gwt: multiple repositories match '$query':" >&2
+      for m in "${exact_matches[@]}"; do
+        echo "  $m" >&2
+      done
+      return 1
+    elif [[ ${#matches[@]} -eq 1 ]]; then
+      cd "${matches[1]}"
+      echo "${matches[1]}"
+      return 0
+    elif [[ ${#matches[@]} -gt 1 ]]; then
+      echo "gwt: multiple repositories match '$query':" >&2
+      for m in "${matches[@]}"; do
+        echo "  $m" >&2
+      done
+      return 1
+    elif [[ ${#path_matches[@]} -eq 1 ]]; then
+      cd "${path_matches[1]}"
+      echo "${path_matches[1]}"
+      return 0
+    elif [[ ${#path_matches[@]} -gt 1 ]]; then
+      echo "gwt: multiple repositories match '$query':" >&2
+      for m in "${path_matches[@]}"; do
+        echo "  $m" >&2
+      done
+      return 1
+    fi
+
+    echo "gwt: no matching repository found for '$query'" >&2
     return 1
   }
 
@@ -633,6 +725,10 @@ gwt() {
         shift
         _gwt_cd "$@"
         ;;
+      main|m)
+        shift
+        _gwt_main "$@"
+        ;;
       list|ls)
         shift
         _gwt_ls "$@"
@@ -654,7 +750,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
   }
 }
 

@@ -15,6 +15,7 @@
 #  gwt rm -f [NAME]            as above
 #  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
 #  gwt ide [NAME]              get or set configured IDE (defaults to nvim)
+#  gwt upgrade                 upgrade gwt repository (git pull)
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -703,6 +704,31 @@ gwt() {
     _gwt_launch_ide "$override_ide"
   }
 
+  _gwt_upgrade() {
+    local gwt_dir="${GWT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gwt}"
+    if [[ ! -d "$gwt_dir/.git" ]]; then
+      local script_dir="${${(%):-%x}:A:h}"
+      if [[ -d "$script_dir/.git" ]]; then
+        gwt_dir="$script_dir"
+      fi
+    fi
+
+    if [[ ! -d "$gwt_dir/.git" ]]; then
+      echo "gwt: repository not found at $gwt_dir" >&2
+      return 1
+    fi
+
+    echo "Upgrading gwt at $gwt_dir..."
+    if git -C "$gwt_dir" pull "$@"; then
+      if [[ -f "$gwt_dir/gwt.sh" ]]; then
+        source "$gwt_dir/gwt.sh"
+      fi
+      return 0
+    else
+      return 1
+    fi
+  }
+
   {
     case "$1" in
       config)
@@ -741,6 +767,10 @@ gwt() {
         shift
         _gwt_pull "$@"
         ;;
+      upgrade|update)
+        shift
+        _gwt_upgrade "$@"
+        ;;
       add)
         shift
         _gwt_create "$@"
@@ -750,7 +780,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade 2>/dev/null
   }
 }
 

@@ -29,21 +29,27 @@ GWT_IDE=none gwt add <branch-name>
 ## Command Reference for Agents
 
 ### 1. Create a New Worktree Branch
-Creates a new worktree under `../gwt-<repo>/<branch-name>`, installs dependencies if `yarn.lock` is present, and skips IDE launch.
+Creates a new worktree under `../gwt-<repo>/<branch-name>`, installs dependencies if `yarn.lock` is present (unless `--no-install` is supplied), and skips IDE launch.
 
 ```bash
 gwt add --ide none <branch-name>
 # or shorthand:
 gwt --ide none <branch-name>
+
+# Skip running yarn / dependency installation:
+gwt add --ide none --no-install <branch-name>
 ```
 
 ### 2. Pull a Remote Branch into a Worktree
-Fetches `origin/<branch-name>`, creates a tracking worktree at `../gwt-<repo>/<branch-name>`, installs dependencies, and skips IDE launch.
+Fetches `origin/<branch-name>`, creates a tracking worktree at `../gwt-<repo>/<branch-name>`, installs dependencies (unless `--no-install` is supplied), and skips IDE launch.
 
 ```bash
 gwt pull --ide none <branch-name>
 # or shorthand:
 gwt p --ide none <branch-name>
+
+# Skip running yarn / dependency installation:
+gwt pull --ide none --no-install <branch-name>
 ```
 
 ### 3. Switch to an Existing Worktree

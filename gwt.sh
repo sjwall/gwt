@@ -1,7 +1,7 @@
 #!/bin/zsh
 # git worktree helper
-#  gwt [add] [--ide IDE] NAME  create worktree ../gwt-<dir-name>/NAME, cd, yarn, launch IDE
-#  gwt pull [--ide IDE] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
+#  gwt [add] [--ide IDE] [--no-install] NAME  create worktree ../gwt-<dir-name>/NAME, cd, yarn, launch IDE
+#  gwt pull [--ide IDE] [--no-install] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
 #  gwt p NAME                  as above
 #  gwt cd NAME                 cd to worktree matching NAME
 #  gwt main [NAME]             cd to main repository matching NAME (defaults to main repo of current worktree)
@@ -510,6 +510,7 @@ gwt() {
 
   _gwt_pull() {
     local override_ide=""
+    local skip_install=0
     local args=()
 
     while [[ $# -gt 0 ]]; do
@@ -525,6 +526,10 @@ gwt() {
           fi
           override_ide="$2"
           shift 2
+          ;;
+        --no-install)
+          skip_install=1
+          shift
           ;;
         *)
           args+=("$1")
@@ -546,11 +551,12 @@ gwt() {
     local dest="$dir_gwt/$branch"
     git worktree add -b "$branch" "$dest" "origin/$branch"
     cd "$dest"
-    _gwt_init_ide "$override_ide"
+    _gwt_init_ide "$override_ide" "$skip_install"
   }
 
   _gwt_create() {
     local override_ide=""
+    local skip_install=0
     local args=()
 
     while [[ $# -gt 0 ]]; do
@@ -566,6 +572,10 @@ gwt() {
           fi
           override_ide="$2"
           shift 2
+          ;;
+        --no-install)
+          skip_install=1
+          shift
           ;;
         *)
           args+=("$1")
@@ -586,7 +596,7 @@ gwt() {
     local dest="$dir_gwt/$branch"
     git worktree add "$dest"
     cd "$dest"
-    _gwt_init_ide "$override_ide"
+    _gwt_init_ide "$override_ide" "$skip_install"
   }
 
   _gwt_config() {
@@ -698,8 +708,11 @@ gwt() {
 
   _gwt_init_ide() {
     local override_ide="$1"
-    if [ -f yarn.lock ]; then
-      yarn
+    local skip_install="${2:-0}"
+    if [[ "$skip_install" -eq 0 ]]; then
+      if [ -f yarn.lock ]; then
+        yarn
+      fi
     fi
     _gwt_launch_ide "$override_ide"
   }

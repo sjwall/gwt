@@ -211,7 +211,7 @@ gwt() {
 
   _gwt_cd() {
     if [[ $# -ne 1 ]]; then
-      echo "gwt: unknown command: cd $*" >&2
+      echo "gwt: unknown command: 'cd $*'" >&2
       return 1
     fi
 
@@ -309,7 +309,7 @@ gwt() {
         return 1
       fi
     elif [[ $# -gt 1 ]]; then
-      echo "gwt: unknown command: main $*" >&2
+      echo "gwt: unknown command: 'main $*'" >&2
       return 1
     fi
 
@@ -410,7 +410,7 @@ gwt() {
     done
 
     if [[ ${#args[@]} -ne 1 ]]; then
-      echo "gwt: unknown command: switch ${args[*]}" >&2
+      echo "gwt: unknown command: switch '${args[*]}'" >&2
       return 1
     fi
 
@@ -534,7 +534,7 @@ gwt() {
     done
 
     if [[ ${#args[@]} -ne 1 ]]; then
-      echo "gwt: unknown command: pull ${args[*]}" >&2
+      echo "gwt: unknown command: 'pull ${args[*]}'" >&2
       return 1
     fi
 
@@ -575,7 +575,7 @@ gwt() {
     done
 
     if [[ ${#args[@]} -ne 1 ]]; then
-      echo "gwt: unknown command: ${args[*]}" >&2
+      echo "gwt: unknown command: '${args[*]}'" >&2
       return 1
     fi
 

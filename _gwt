@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 
 _gwt_comp_ides() {
+  (( $+functions[_describe] )) || return 0
   local -a ides
   ides=(
     'nvim:Neovim'
@@ -23,6 +24,7 @@ _gwt_comp_ides() {
 }
 
 _gwt_comp_worktrees() {
+  (( $+functions[_describe] )) || return 0
   local -a wt_entries
   local -A seen_paths
   local main_repo repo wt_list wt_path wt_name
@@ -59,6 +61,7 @@ _gwt_comp_worktrees() {
 }
 
 _gwt_comp_repositories() {
+  (( $+functions[_describe] )) || return 0
   local -a repo_entries
   local -A seen_repos
   local main_repo repo repo_name
@@ -92,6 +95,7 @@ _gwt_comp_repositories() {
 }
 
 _gwt_comp_remote_branches() {
+  (( $+functions[_describe] )) || return 0
   local -a branches
   local b
   for b in ${(f)"$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ 2>/dev/null)"}; do
@@ -104,6 +108,7 @@ _gwt_comp_remote_branches() {
 }
 
 _gwt_comp_branches() {
+  (( $+functions[_describe] )) || return 0
   local -a branches
   local b
   for b in ${(f)"$(git for-each-ref --format='%(refname:short)' refs/heads/ refs/remotes/origin/ 2>/dev/null)"}; do
@@ -117,6 +122,7 @@ _gwt_comp_branches() {
 }
 
 _gwt_comp_config() {
+  (( $+functions[_describe] )) || return 0
   local -a config_actions config_keys
   config_actions=(
     'get:Get configuration key value'
@@ -166,6 +172,7 @@ _gwt_comp_config() {
 }
 
 _gwt() {
+  (( $+functions[_arguments] )) || return 0
   local curcontext="$curcontext" state state_descr line
   typeset -A opt_args
 
@@ -273,8 +280,9 @@ _gwt() {
   esac
 }
 
-# If executing directly as a completion function (e.g. autoloaded by compinit)
-if [[ "${(%):-%N}" == "_gwt" || "${(%):-%x}" == *"/_gwt" ]]; then
+# If executing inside Zsh completion context (e.g. autoloaded on first Tab press)
+if (( $+compstate )); then
   _gwt "$@"
 fi
+
 

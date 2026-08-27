@@ -16,6 +16,44 @@
 #  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
 #  gwt ide [NAME]              get or set configured IDE (defaults to nvim)
 #  gwt upgrade                 upgrade gwt repository (git pull)
+#
+# Exit Codes:
+#   0  - Success
+#   1  - cd: invalid argument count (expected exactly 1 argument)
+#   2  - cd: multiple worktrees match in current repository
+#   3  - cd: multiple worktrees match across tracked repositories
+#   4  - cd: no matching worktree found for query
+#   5  - main: not inside a git repository and no repository specified / found
+#   6  - main: invalid argument count (more than 1 argument provided)
+#   7  - main: multiple exact repository matches found
+#   8  - main: multiple repository name matches found
+#   9  - main: multiple repository path matches found
+#   10 - main: no matching repository found for query
+#   11 - switch: --ide option requires an argument
+#   12 - switch: invalid argument count (expected exactly 1 worktree name)
+#   13 - remove: cannot remove main repository
+#   14 - remove: failed to change directory to main repository
+#   15 - remove: git worktree remove command failed
+#   16 - pull: --ide option requires an argument
+#   17 - pull: invalid argument count (expected exactly 1 branch name)
+#   18 - pull: failed to determine target worktree directory location
+#   19 - pull: failed to create worktree parent directory
+#   20 - pull: git fetch origin failed
+#   21 - pull: git worktree add command failed
+#   22 - pull: failed to change directory to newly created worktree
+#   23 - add: --ide option requires an argument
+#   24 - add: invalid argument count (expected exactly 1 branch name)
+#   25 - add: failed to determine target worktree directory location
+#   26 - add: failed to create worktree parent directory
+#   27 - add: git worktree add command failed
+#   28 - add: failed to change directory to newly created worktree
+#   29 - config: invalid argument count for get (expected exactly 1 key)
+#   30 - config: specified key not found in get
+#   31 - config: invalid argument count for set (expected key and value)
+#   32 - config: invalid argument count for unset (expected exactly 1 key)
+#   33 - config: specified key not found
+#   34 - upgrade: gwt repository not found at target directory
+#   35 - upgrade: git pull failed during upgrade
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -258,7 +296,7 @@ gwt() {
         for m in "${matches[@]}"; do
           echo "  $m" >&2
         done
-        return 1
+        return 2
       fi
     fi
 
@@ -285,13 +323,13 @@ gwt() {
           for m in "${matches[@]}"; do
             echo "  $m" >&2
           done
-          return 1
+          return 3
         fi
       fi
     fi
 
     echo "gwt: no matching worktree found for '$query'" >&2
-    return 1
+    return 4
   }
 
   _gwt_main() {
@@ -306,11 +344,11 @@ gwt() {
         return 0
       else
         echo "gwt: no matching repository found" >&2
-        return 1
+        return 5
       fi
     elif [[ $# -gt 1 ]]; then
       echo "gwt: unknown command: 'main $*'" >&2
-      return 1
+      return 6
     fi
 
     local repo_list=()
@@ -357,7 +395,7 @@ gwt() {
       for m in "${exact_matches[@]}"; do
         echo "  $m" >&2
       done
-      return 1
+      return 7
     elif [[ ${#matches[@]} -eq 1 ]]; then
       cd "${matches[1]}"
       echo "${matches[1]}"
@@ -367,7 +405,7 @@ gwt() {
       for m in "${matches[@]}"; do
         echo "  $m" >&2
       done
-      return 1
+      return 8
     elif [[ ${#path_matches[@]} -eq 1 ]]; then
       cd "${path_matches[1]}"
       echo "${path_matches[1]}"
@@ -377,11 +415,11 @@ gwt() {
       for m in "${path_matches[@]}"; do
         echo "  $m" >&2
       done
-      return 1
+      return 9
     fi
 
     echo "gwt: no matching repository found for '$query'" >&2
-    return 1
+    return 10
   }
 
   _gwt_switch() {
@@ -397,7 +435,7 @@ gwt() {
         --ide)
           if [[ $# -lt 2 ]]; then
             echo "gwt: --ide requires an argument" >&2
-            return 1
+            return 11
           fi
           override_ide="$2"
           shift 2
@@ -411,11 +449,11 @@ gwt() {
 
     if [[ ${#args[@]} -ne 1 ]]; then
       echo "gwt: unknown command: switch '${args[*]}'" >&2
-      return 1
+      return 12
     fi
 
     local query="${args[1]}"
-    _gwt_cd "$query" || return 1
+    _gwt_cd "$query" || return $?
     _gwt_launch_ide "$override_ide"
   }
 
@@ -480,7 +518,7 @@ gwt() {
         targets=("$current_wt")
       else
         echo "gwt: cannot remove main repository; please specify a worktree" >&2
-        return 1
+        return 13
       fi
     else
       local resolved_targets=()
@@ -497,14 +535,14 @@ gwt() {
 
     local orig_pwd="$PWD"
     if [[ $is_linked_worktree -eq 1 ]] || [[ "$PWD" != "$main_repo" ]]; then
-      cd "$main_repo" || return 1
+      cd "$main_repo" || return 14
     fi
 
     if ! git worktree remove "${flags[@]}" "${targets[@]}"; then
       if [[ "$PWD" != "$orig_pwd" ]]; then
         cd "$orig_pwd" 2>/dev/null
       fi
-      return 1
+      return 15
     fi
   }
 
@@ -522,7 +560,7 @@ gwt() {
         --ide)
           if [[ $# -lt 2 ]]; then
             echo "gwt: --ide requires an argument" >&2
-            return 1
+            return 16
           fi
           override_ide="$2"
           shift 2
@@ -540,17 +578,17 @@ gwt() {
 
     if [[ ${#args[@]} -ne 1 ]]; then
       echo "gwt: unknown command: 'pull ${args[*]}'" >&2
-      return 1
+      return 17
     fi
 
     local branch="${args[1]}"
     local dir_gwt
-    dir_gwt=$(_gwt_get_dir_gwt) || return 1
-    mkdir -p "$dir_gwt" || return 1
-    git fetch origin "$branch" || return 1
+    dir_gwt=$(_gwt_get_dir_gwt) || return 18
+    mkdir -p "$dir_gwt" || return 19
+    git fetch origin "$branch" || return 20
     local dest="$dir_gwt/$branch"
-    git worktree add -b "$branch" "$dest" "origin/$branch" || return 1
-    cd "$dest" || return 1
+    git worktree add -b "$branch" "$dest" "origin/$branch" || return 21
+    cd "$dest" || return 22
     _gwt_init_ide "$override_ide" "$skip_install"
   }
 
@@ -568,7 +606,7 @@ gwt() {
         --ide)
           if [[ $# -lt 2 ]]; then
             echo "gwt: --ide requires an argument" >&2
-            return 1
+            return 23
           fi
           override_ide="$2"
           shift 2
@@ -586,16 +624,16 @@ gwt() {
 
     if [[ ${#args[@]} -ne 1 ]]; then
       echo "gwt: unknown command: '${args[*]}'" >&2
-      return 1
+      return 24
     fi
 
     local branch="${args[1]}"
     local dir_gwt
-    dir_gwt=$(_gwt_get_dir_gwt) || return 1
-    mkdir -p "$dir_gwt" || return 1
+    dir_gwt=$(_gwt_get_dir_gwt) || return 25
+    mkdir -p "$dir_gwt" || return 26
     local dest="$dir_gwt/$branch"
-    git worktree add "$dest" || return 1
-    cd "$dest" || return 1
+    git worktree add "$dest" || return 27
+    cd "$dest" || return 28
     _gwt_init_ide "$override_ide" "$skip_install"
   }
 
@@ -628,7 +666,7 @@ gwt() {
         shift
         if [[ $# -ne 1 ]]; then
           echo "gwt: usage: gwt config get <key>" >&2
-          return 1
+          return 29
         fi
         local key="$1"
         if [[ "$key" == "ide" ]]; then
@@ -642,14 +680,14 @@ gwt() {
           return 0
         else
           echo "gwt: config key '$key' not found" >&2
-          return 1
+          return 30
         fi
         ;;
       set)
         shift
         if [[ $# -lt 2 ]]; then
           echo "gwt: usage: gwt config set <key> <value>" >&2
-          return 1
+          return 31
         fi
         local key="$1"
         shift
@@ -662,7 +700,7 @@ gwt() {
         shift
         if [[ $# -ne 1 ]]; then
           echo "gwt: usage: gwt config unset <key>" >&2
-          return 1
+          return 32
         fi
         local key="$1"
         _gwt_unset_config "$key"
@@ -683,7 +721,7 @@ gwt() {
             return 0
           else
             echo "gwt: config key '$key' not found" >&2
-            return 1
+            return 33
           fi
         else
           local key="$1"
@@ -728,7 +766,7 @@ gwt() {
 
     if [[ ! -d "$gwt_dir/.git" ]]; then
       echo "gwt: repository not found at $gwt_dir" >&2
-      return 1
+      return 34
     fi
 
     echo "Upgrading gwt at $gwt_dir..."
@@ -738,7 +776,7 @@ gwt() {
       fi
       return 0
     else
-      return 1
+      return 35
     fi
   }
 

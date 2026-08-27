@@ -161,3 +161,48 @@ gwt upgrade
    ```zsh
    zsh -c 'source "${XDG_DATA_HOME:-$HOME/.local/share}/gwt/gwt.sh" && gwt add --ide none <branch-name>'
    ```
+
+---
+
+## Exit Codes
+
+The `gwt` utility returns `0` on success and unique non-zero exit codes for error handling in scripts:
+
+| Exit Code | Command / Category | Description |
+|-----------|--------------------|-------------|
+| `0` | Success | Command completed successfully. |
+| `1` | `cd` | Invalid argument count (expected exactly 1 argument). |
+| `2` | `cd` | Multiple matching worktrees found in current repository. |
+| `3` | `cd` | Multiple matching worktrees found across tracked repositories. |
+| `4` | `cd` | No matching worktree found for query. |
+| `5` | `main` | Not inside a git repository and no repository specified or found. |
+| `6` | `main` | Invalid argument count (more than 1 argument provided). |
+| `7` | `main` | Multiple exact repository matches found. |
+| `8` | `main` | Multiple repository name matches found. |
+| `9` | `main` | Multiple repository path matches found. |
+| `10` | `main` | No matching repository found for query. |
+| `11` | `switch` | Missing required argument for `--ide` option. |
+| `12` | `switch` | Invalid argument count (expected exactly 1 worktree name). |
+| `13` | `remove` | Cannot remove main repository (a worktree target must be specified). |
+| `14` | `remove` | Failed to change directory to main repository before removal. |
+| `15` | `remove` | `git worktree remove` command failed. |
+| `16` | `pull` | Missing required argument for `--ide` option. |
+| `17` | `pull` | Invalid argument count (expected exactly 1 branch name). |
+| `18` | `pull` | Failed to determine target worktree directory location. |
+| `19` | `pull` | Failed to create worktree parent directory. |
+| `20` | `pull` | `git fetch origin` command failed. |
+| `21` | `pull` | `git worktree add` command failed. |
+| `22` | `pull` | Failed to change directory to newly created worktree. |
+| `23` | `add` | Missing required argument for `--ide` option. |
+| `24` | `add` | Invalid argument count (expected exactly 1 branch name). |
+| `25` | `add` | Failed to determine target worktree directory location. |
+| `26` | `add` | Failed to create worktree parent directory. |
+| `27` | `add` | `git worktree add` command failed. |
+| `28` | `add` | Failed to change directory to newly created worktree. |
+| `29` | `config` | Invalid argument count for `gwt config get` (expected exactly 1 key). |
+| `30` | `config` | Specified configuration key not found in `gwt config get`. |
+| `31` | `config` | Invalid argument count for `gwt config set` (expected key and value). |
+| `32` | `config` | Invalid argument count for `gwt config unset` (expected exactly 1 key). |
+| `33` | `config` | Specified configuration key not found in `gwt config <key>`. |
+| `34` | `upgrade` | `gwt` repository not found at target directory. |
+| `35` | `upgrade` | `git pull` command failed during upgrade. |

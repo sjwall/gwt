@@ -103,7 +103,7 @@ fi
 # Verify gwt.sh exists
 if [ ! -f "$INSTALL_DIR/gwt.sh" ]; then
   error "Failed to locate $INSTALL_DIR/gwt.sh"
-  exit 1
+  exit 2
 fi
 
 chmod +x "$INSTALL_DIR/gwt.sh"

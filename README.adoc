@@ -27,6 +27,19 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * Custom worktree parent locations for repositories in unsuitable paths are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/locations`.
 * Configuration settings are stored in `${XDG_CONFIG_HOME:-~/.config}/gwt/config`.
 
+== Autocompletion
+
+`gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
+
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `switch`, `s`, `ls`, `list`, `remove`, `rm`, `config`, `ide`, `upgrade`)
+* Worktree names and paths for `gwt cd`, `gwt switch`, and `gwt remove`
+* Tracked repository names and paths for `gwt main`
+* Remote branches from `origin` for `gwt pull`
+* Branches for `gwt add`
+* Subcommands and configuration keys for `gwt config`
+* Configured IDE options for `gwt ide` and `--ide` flags
+
+
 == Exit Codes
 
 The `gwt` utility returns `0` upon success and unique non-zero exit codes for specific error conditions:

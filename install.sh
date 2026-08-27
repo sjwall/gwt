@@ -72,9 +72,11 @@ elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
   info "Existing installation found at $INSTALL_DIR. Updating..."
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
+    curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
     curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
   elif command -v wget >/dev/null 2>&1; then
     wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
+    wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
     wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
   else
     warn "Neither curl nor wget was found to update files. Keeping existing files."
@@ -88,11 +90,13 @@ else
     info "Downloading gwt.sh..."
     mkdir -p "$INSTALL_DIR"
     curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
+    curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
     curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
   elif command -v wget >/dev/null 2>&1; then
     info "Downloading gwt.sh..."
     mkdir -p "$INSTALL_DIR"
     wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
+    wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
     wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
   else
     error "Neither git, curl, nor wget was found. Please install one of them and try again."

@@ -546,11 +546,11 @@ gwt() {
     local branch="${args[1]}"
     local dir_gwt
     dir_gwt=$(_gwt_get_dir_gwt) || return 1
-    mkdir -p "$dir_gwt"
-    git fetch origin "$branch"
+    mkdir -p "$dir_gwt" || return 1
+    git fetch origin "$branch" || return 1
     local dest="$dir_gwt/$branch"
-    git worktree add -b "$branch" "$dest" "origin/$branch"
-    cd "$dest"
+    git worktree add -b "$branch" "$dest" "origin/$branch" || return 1
+    cd "$dest" || return 1
     _gwt_init_ide "$override_ide" "$skip_install"
   }
 
@@ -592,10 +592,10 @@ gwt() {
     local branch="${args[1]}"
     local dir_gwt
     dir_gwt=$(_gwt_get_dir_gwt) || return 1
-    mkdir -p "$dir_gwt"
+    mkdir -p "$dir_gwt" || return 1
     local dest="$dir_gwt/$branch"
-    git worktree add "$dest"
-    cd "$dest"
+    git worktree add "$dest" || return 1
+    cd "$dest" || return 1
     _gwt_init_ide "$override_ide" "$skip_install"
   }
 

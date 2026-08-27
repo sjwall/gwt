@@ -273,4 +273,8 @@ _gwt() {
   esac
 }
 
-_gwt "$@"
+# If executing directly as a completion function (e.g. autoloaded by compinit)
+if [[ "${(%):-%N}" == "_gwt" || "${(%):-%x}" == *"/_gwt" ]]; then
+  _gwt "$@"
+fi
+

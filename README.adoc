@@ -19,7 +19,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * `gwt ls` / `gwt list`: List all tracked worktrees.
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
-* `gwt upgrade` / `gwt update`: Upgrade the gwt repository (`git pull` and reload `gwt.sh`).
+* `gwt upgrade`: Upgrade the gwt repository (`git pull` and reload `gwt.sh`).
 
 == Configuration
 

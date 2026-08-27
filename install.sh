@@ -48,14 +48,14 @@ error() {
   printf "${RED}error:${RESET} %s\n" "$1" >&2
 }
 
-IS_UPDATE=0
+IS_UPGRADE=0
 
 # Create parent directory if needed
 mkdir -p "$(dirname "$INSTALL_DIR")"
 
 # Clone or update repository
 if [ -d "$INSTALL_DIR/.git" ]; then
-  IS_UPDATE=1
+  IS_UPGRADE=1
   info "Existing git repository found at $INSTALL_DIR. Updating..."
   if command -v git >/dev/null 2>&1; then
     (
@@ -68,7 +68,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     warn "git command not found. Keeping existing repository."
   fi
 elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
-  IS_UPDATE=1
+  IS_UPGRADE=1
   info "Existing installation found at $INSTALL_DIR. Updating..."
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
@@ -150,8 +150,8 @@ else
 fi
 
 echo ""
-if [ "$IS_UPDATE" -eq 1 ]; then
-  success "gwt updated successfully!"
+if [ "$IS_UPGRADE" -eq 1 ]; then
+  success "gwt upgraded successfully!"
 else
   success "gwt installed successfully!"
 fi

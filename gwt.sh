@@ -767,7 +767,7 @@ gwt() {
         shift
         _gwt_pull "$@"
         ;;
-      upgrade|update)
+      upgrade)
         shift
         _gwt_upgrade "$@"
         ;;

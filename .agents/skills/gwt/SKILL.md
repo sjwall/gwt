@@ -1,7 +1,7 @@
 ---
 name: gwt
 description: >-
-  Manage git worktrees using the gwt helper tool without launching an interactive IDE or editor. Use this skill whenever creating, pulling, switching, listing, or removing git worktrees in repositories managed by gwt.
+  Manage git worktrees and repositories using the gwt helper tool without launching an interactive IDE or editor. Use this skill whenever creating, pulling, switching, listing, or removing git worktrees in repositories managed by gwt.
 ---
 
 # `gwt` Worktree Helper Skill
@@ -65,21 +65,40 @@ gwt switch --ide none <worktree-name>
 gwt s --ide none <worktree-name>
 ```
 
-### 4. List All Tracked Worktrees
-Displays all worktrees across tracked repositories.
+### 4. Switch to the Main Repository
+Changes directory to the main repository for the current worktree, or searches tracked repositories if a name is provided.
+
+```bash
+# Return to the main repository for the current worktree:
+gwt main
+# or shorthand:
+gwt m
+
+# Switch to a specific main repository by name:
+gwt main <repo-name>
+gwt m <repo-name>
+```
+
+### 5. List All Tracked Worktrees
+Displays all worktrees across tracked repositories. Extra arguments are passed through to `git worktree list`.
 
 ```bash
 gwt ls
 # or:
 gwt list
+
+# Pass git worktree list flags (e.g. porcelain output):
+gwt ls --porcelain
 ```
 
-### 5. Remove a Worktree
+### 6. Remove a Worktree
 Deletes the specified worktree or the current worktree if run from within one (automatically changes directory to the main repository before removal).
 
 ```bash
 # When inside a worktree, remove the current worktree:
 gwt rm
+# or:
+gwt remove
 
 # Remove a specific worktree by name:
 gwt rm <worktree-name>
@@ -87,22 +106,46 @@ gwt rm <worktree-name>
 # Force removal if worktree has uncommitted changes or untracked files:
 gwt rm -f
 gwt rm -f <worktree-name>
+# (--force and -force are also supported)
+gwt rm --force <worktree-name>
 ```
 
-### 6. Persistent Configuration
-To permanently disable IDE launching for the current user configuration:
+### 7. Configuration Management
+Inspect, set, or remove configuration options:
 
 ```bash
+# Permanently disable IDE launching for the current user configuration:
 gwt ide none
 # or:
 gwt config set ide none
+
+# Inspect all current configuration settings:
+gwt config
+
+# Get or set a specific config key:
+gwt config get <key>
+gwt config set <key> <value>
+
+# Unset/remove a config key:
+gwt config unset <key>
+# or shorthand:
+gwt config rm <key>
 ```
 
-To inspect the current configuration:
+### 8. Upgrade `gwt`
+Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 
 ```bash
-gwt config
+gwt upgrade
 ```
+
+---
+
+## Configuration & Storage Locations
+
+* **Tracked repositories**: `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`
+* **Custom worktree parent locations**: `${XDG_CONFIG_HOME:-~/.config}/gwt/locations`
+* **Configuration settings**: `${XDG_CONFIG_HOME:-~/.config}/gwt/config`
 
 ---
 

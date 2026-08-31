@@ -13,6 +13,8 @@
 #  gwt rm [NAME]               as above
 #  gwt rm -force [NAME]        as above but with force
 #  gwt rm -f [NAME]            as above
+#  gwt track [PATH]            track git repository (defaults to current repository)
+#  gwt t [PATH]                as above
 #  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
 #  gwt ide [NAME]              get or set configured IDE (defaults to nvim)
 #  gwt upgrade                 upgrade gwt repository (git pull)
@@ -54,6 +56,9 @@
 #   33 - config: specified key not found
 #   34 - upgrade: gwt repository not found at target directory
 #   35 - upgrade: git pull failed during upgrade
+#   36 - track: not inside a git repository and no repository specified
+#   37 - track: invalid argument count (more than 1 argument provided)
+#   38 - track: specified path is not a git repository
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -780,6 +785,41 @@ gwt() {
     fi
   }
 
+  _gwt_track() {
+    local target_repo=""
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
+    local repos_file="$config_dir/repos"
+
+    if [[ $# -eq 0 ]]; then
+      if [[ -z "$main_repo" ]]; then
+        echo "gwt: not inside a git repository" >&2
+        return 36
+      fi
+      target_repo="$main_repo"
+    elif [[ $# -eq 1 ]]; then
+      local path_arg="$1"
+      if [[ ! -d "$path_arg" ]]; then
+        echo "gwt: not a git repository: '$path_arg'" >&2
+        return 38
+      fi
+      target_repo=$(git -C "$path_arg" worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
+      if [[ -z "$target_repo" ]]; then
+        echo "gwt: not a git repository: '$path_arg'" >&2
+        return 38
+      fi
+    else
+      echo "gwt: unknown command: 'track $*'" >&2
+      return 37
+    fi
+
+    mkdir -p "$config_dir"
+    if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$target_repo" "$repos_file" 2>/dev/null; then
+      echo "$target_repo" >> "$repos_file"
+    fi
+    echo "$target_repo"
+    return 0
+  }
+
   {
     case "$1" in
       config)
@@ -822,6 +862,10 @@ gwt() {
         shift
         _gwt_upgrade "$@"
         ;;
+      track|t)
+        shift
+        _gwt_track "$@"
+        ;;
       add)
         shift
         _gwt_create "$@"
@@ -831,7 +875,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track 2>/dev/null
   }
 }
 

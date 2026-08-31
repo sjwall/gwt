@@ -190,6 +190,8 @@ _gwt() {
     'list:Alias for ls'
     'remove:Remove a worktree'
     'rm:Alias for remove'
+    'track:Track a git repository'
+    't:Alias for track'
     'config:Get or set configuration options'
     'ide:Get or set configured IDE'
     'upgrade:Upgrade gwt repository'
@@ -238,6 +240,10 @@ _gwt() {
             '--ide=[Override IDE to launch]:IDE:_gwt_comp_ides' \
             '--no-install[Skip dependency installation]' \
             '1:branch:->branches' && return 0
+          ;;
+        track|t)
+          _arguments \
+            '1:repository:_files -/' && return 0
           ;;
         config)
           _gwt_comp_config

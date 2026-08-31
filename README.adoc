@@ -18,6 +18,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * `gwt switch [--ide <ide>] <name>` / `gwt s [--ide <ide>] <name>`: Switch to a worktree matching `<name>` and launch configured IDE (supports `--ide <ide>` or `--ide none`).
 * `gwt ls` / `gwt list`: List all tracked worktrees.
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
+* `gwt track [<path>]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository).
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
 * `gwt upgrade`: Upgrade the gwt repository (`git pull` and reload `gwt.sh`).
 
@@ -31,7 +32,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 
 `gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `switch`, `s`, `ls`, `list`, `remove`, `rm`, `config`, `ide`, `upgrade`)
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `switch`, `s`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `upgrade`)
 * Worktree names and paths for `gwt cd`, `gwt switch`, and `gwt remove`
 * Tracked repository names and paths for `gwt main`
 * Remote branches from `origin` for `gwt pull`
@@ -83,5 +84,8 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `33` | `config` | Specified configuration key not found in `gwt config <key>`.
 | `34` | `upgrade` | `gwt` repository not found at target directory.
 | `35` | `upgrade` | `git pull` command failed during upgrade.
+| `36` | `track` | Not inside a git repository and no repository specified.
+| `37` | `track` | Invalid argument count (more than 1 argument provided).
+| `38` | `track` | Specified path is not a git repository.
 |===
 

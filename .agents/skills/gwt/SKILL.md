@@ -110,7 +110,21 @@ gwt rm -f <worktree-name>
 gwt rm --force <worktree-name>
 ```
 
-### 7. Configuration Management
+### 7. Track a Git Repository
+Adds the current repository (or a specified repository path) to the list of tracked repositories.
+
+```bash
+# Track the current repository:
+gwt track
+# or shorthand:
+gwt t
+
+# Track a specific repository path:
+gwt track /path/to/repo
+gwt t /path/to/repo
+```
+
+### 8. Configuration Management
 Inspect, set, or remove configuration options:
 
 ```bash
@@ -132,7 +146,7 @@ gwt config unset <key>
 gwt config rm <key>
 ```
 
-### 8. Upgrade `gwt`
+### 9. Upgrade `gwt`
 Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 
 ```bash
@@ -206,3 +220,6 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `33` | `config` | Specified configuration key not found in `gwt config <key>`. |
 | `34` | `upgrade` | `gwt` repository not found at target directory. |
 | `35` | `upgrade` | `git pull` command failed during upgrade. |
+| `36` | `track` | Not inside a git repository and no repository specified. |
+| `37` | `track` | Invalid argument count (more than 1 argument provided). |
+| `38` | `track` | Specified path is not a git repository. |

@@ -11,6 +11,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     // List tracked worktrees
+    #[command(alias = "ls")]
     List(ListArgs),
 }
 

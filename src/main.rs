@@ -18,6 +18,8 @@ enum Commands {
     Track(TrackArgs),
     // View or set configuration options
     Config(ConfigArgs),
+    // Get or set configured IDE (defaults to nvim)
+    Ide(IdeArgs),
 }
 
 #[derive(Args)]
@@ -39,6 +41,13 @@ struct ConfigArgs {
     args: Vec<String>,
 }
 
+#[derive(Args)]
+struct IdeArgs {
+    // IDE command or name to configure (e.g. nvim, code, cursor, none)
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    ide: Vec<String>,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -57,6 +66,12 @@ fn main() {
         }
         Commands::Config(args) => {
             if let Err(err) = gwt::commands::config::run_config(&args.args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Ide(args) => {
+            if let Err(err) = gwt::commands::ide::run(&args.ide) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }

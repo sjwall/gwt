@@ -13,12 +13,21 @@ enum Commands {
     // List tracked worktrees
     #[command(alias = "ls")]
     List(ListArgs),
+    // Track a git repository
+    #[command(alias = "t")]
+    Track(TrackArgs),
 }
 
 #[derive(Args)]
 struct ListArgs {
     // Worktree name to match to limit the list to
     name: Option<String>,
+}
+
+#[derive(Args)]
+struct TrackArgs {
+    // Path to the git repository to track (defaults to current repository)
+    path: Option<String>,
 }
 
 fn main() {
@@ -29,6 +38,12 @@ fn main() {
             if let Err(err) = gwt::commands::list::list_and_print(args.name.as_deref()) {
                 eprintln!("gwt: {err}");
                 std::process::exit(1);
+            }
+        }
+        Commands::Track(args) => {
+            if let Err(err) = gwt::commands::track::track_and_print(args.path.as_deref()) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
             }
         }
     }

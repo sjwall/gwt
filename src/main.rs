@@ -24,11 +24,12 @@ struct ListArgs {
 fn main() {
     let cli = Cli::parse();
 
-    // You can check for the existence of subcommands, and if found use their
-    // matches just as you would the top level cmd
     match &cli.command {
-        Commands::List(name) => {
-            println!("list: {:?}", name.name);
+        Commands::List(args) => {
+            if let Err(err) = gwt::commands::list::list_and_print(args.name.as_deref()) {
+                eprintln!("gwt: {err}");
+                std::process::exit(1);
+            }
         }
     }
 }

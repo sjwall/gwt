@@ -12,6 +12,9 @@ struct Cli {
 enum Commands {
     // Switch to a worktree matching NAME
     Cd(CdArgs),
+    // Switch to a worktree matching NAME and launch configured IDE
+    #[command(alias = "s")]
+    Switch(SwitchArgs),
     // List tracked worktrees
     #[command(alias = "ls")]
     List(ListArgs),
@@ -22,6 +25,13 @@ enum Commands {
     Config(ConfigArgs),
     // Get or set configured IDE (defaults to nvim)
     Ide(IdeArgs),
+}
+
+#[derive(Args)]
+struct SwitchArgs {
+    // Worktree name to match and optional --ide flag
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    args: Vec<String>,
 }
 
 #[derive(Args)]
@@ -63,6 +73,12 @@ fn main() {
     match &cli.command {
         Commands::Cd(args) => {
             if let Err(err) = gwt::commands::cd::run(&args.args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Switch(args) => {
+            if let Err(err) = gwt::commands::switch::run(&args.args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }

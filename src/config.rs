@@ -32,6 +32,15 @@ pub fn expand_tilde(path: &str) -> PathBuf {
     PathBuf::from(path)
 }
 
+/// Returns the path to the `config` file in the given config directory (or default).
+pub fn get_config_file(config_dir: Option<&Path>) -> Option<PathBuf> {
+    let config_file = "config";
+    match config_dir {
+        Some(p) => Some(p.join(config_file)),
+        None => get_app_config_dir().map(|p| p.join(config_file)),
+    }
+}
+
 /// Reads trimmed non-empty, non-comment lines from a file.
 pub fn read_lines(file_path: &Path) -> io::Result<Vec<String>> {
     if !file_path.exists() {
@@ -261,4 +270,14 @@ mod tests {
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_get_config_file() {
+        let custom_dir = Path::new("/custom/gwt/config");
+        assert_eq!(
+            get_config_file(Some(custom_dir)),
+            Some(PathBuf::from("/custom/gwt/config/config"))
+        );
+    }
 }
+

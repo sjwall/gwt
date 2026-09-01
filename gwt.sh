@@ -8,7 +8,8 @@
 #  gwt m [NAME]                as above
 #  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
 #  gwt s NAME                  as above
-#  gwt ls                      list all tracked worktrees
+#  gwt ls [NAME]               list tracked worktrees (matching repository NAME)
+#  gwt list [NAME]             as above
 #  gwt remove [NAME]           remove worktree (defaults to current worktree, cd to main repo)
 #  gwt rm [NAME]               as above
 #  gwt rm -force [NAME]        as above but with force
@@ -59,6 +60,11 @@
 #   36 - track: not inside a git repository and no repository specified
 #   37 - track: invalid argument count (more than 1 argument provided)
 #   38 - track: specified path is not a git repository
+#   39 - list: invalid argument count (more than 1 repository specified)
+#   40 - list: multiple exact repository matches found
+#   41 - list: multiple repository name matches found
+#   42 - list: multiple repository path matches found
+#   43 - list: no matching repository found for query
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -463,6 +469,22 @@ gwt() {
   }
 
   _gwt_ls() {
+    local flags=()
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        -*)
+          flags+=("$1")
+          shift
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
     local repos_file="$config_dir/repos"
     local repo_list=()
@@ -479,14 +501,78 @@ gwt() {
       done < "$repos_file"
     fi
 
+    if [[ ${#args[@]} -eq 0 ]]; then
+      local -A seen
+      local repo
+      for repo in "${repo_list[@]}"; do
+        [[ -z "$repo" || ! -d "$repo" ]] && continue
+        [[ -n "${seen[$repo]}" ]] && continue
+        seen[$repo]=1
+        git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
+        git -C "$repo" worktree list "${flags[@]}"
+      done
+      return 0
+    elif [[ ${#args[@]} -gt 1 ]]; then
+      echo "gwt: unknown command: 'list ${args[*]}'" >&2
+      return 39
+    fi
+
+    local query="${args[1]}"
     local -A seen
-    local repo
+    local repo repo_name
+    local exact_matches=()
+    local matches=()
+    local path_matches=()
+
     for repo in "${repo_list[@]}"; do
       [[ -z "$repo" || ! -d "$repo" ]] && continue
       [[ -n "${seen[$repo]}" ]] && continue
       seen[$repo]=1
       git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
-      git -C "$repo" worktree list "$@"
+
+      repo_name=$(basename "$repo")
+      if [[ "${repo_name:l}" == "${query:l}" ]]; then
+        exact_matches+=("$repo")
+      fi
+      if [[ "${repo_name:l}" == *"${query:l}"* ]]; then
+        matches+=("$repo")
+      elif [[ "${repo:l}" == *"${query:l}"* ]]; then
+        path_matches+=("$repo")
+      fi
+    done
+
+    local target_repos=()
+    if [[ ${#exact_matches[@]} -eq 1 ]]; then
+      target_repos=("${exact_matches[1]}")
+    elif [[ ${#exact_matches[@]} -gt 1 ]]; then
+      echo "gwt: multiple repositories match '$query':" >&2
+      for m in "${exact_matches[@]}"; do
+        echo "  $m" >&2
+      done
+      return 40
+    elif [[ ${#matches[@]} -eq 1 ]]; then
+      target_repos=("${matches[1]}")
+    elif [[ ${#matches[@]} -gt 1 ]]; then
+      echo "gwt: multiple repositories match '$query':" >&2
+      for m in "${matches[@]}"; do
+        echo "  $m" >&2
+      done
+      return 41
+    elif [[ ${#path_matches[@]} -eq 1 ]]; then
+      target_repos=("${path_matches[1]}")
+    elif [[ ${#path_matches[@]} -gt 1 ]]; then
+      echo "gwt: multiple repositories match '$query':" >&2
+      for m in "${path_matches[@]}"; do
+        echo "  $m" >&2
+      done
+      return 42
+    else
+      echo "gwt: no matching repository found for '$query'" >&2
+      return 43
+    fi
+
+    for repo in "${target_repos[@]}"; do
+      git -C "$repo" worktree list "${flags[@]}"
     done
   }
 
@@ -895,6 +981,3 @@ if [[ -n "$ZSH_VERSION" ]]; then
   fi
   unset _gwt_comp_dir
 fi
-
-
-

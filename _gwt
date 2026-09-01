@@ -256,6 +256,7 @@ _gwt() {
         ls|list)
           _arguments \
             '--porcelain[Output in machine-readable format]' \
+            '1:repository:->repositories' \
             '*:git worktree list flags: ' && return 0
           ;;
         upgrade)

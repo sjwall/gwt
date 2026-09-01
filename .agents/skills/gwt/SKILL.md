@@ -79,16 +79,22 @@ gwt main <repo-name>
 gwt m <repo-name>
 ```
 
-### 5. List All Tracked Worktrees
-Displays all worktrees across tracked repositories. Extra arguments are passed through to `git worktree list`.
+### 5. List Tracked Worktrees
+Displays worktrees across tracked repositories, optionally filtered by repository name or query. Extra arguments (such as `--porcelain`) are passed through to `git worktree list`.
 
 ```bash
+# List all tracked worktrees:
 gwt ls
 # or:
 gwt list
 
+# Filter to worktrees for a specific repository (exact or partial name match):
+gwt ls <repo-name>
+gwt list <repo-name>
+
 # Pass git worktree list flags (e.g. porcelain output):
 gwt ls --porcelain
+gwt ls <repo-name> --porcelain
 ```
 
 ### 6. Remove a Worktree
@@ -223,3 +229,8 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `36` | `track` | Not inside a git repository and no repository specified. |
 | `37` | `track` | Invalid argument count (more than 1 argument provided). |
 | `38` | `track` | Specified path is not a git repository. |
+| `39` | `list` | Invalid argument count (more than 1 repository specified). |
+| `40` | `list` | Multiple exact repository matches found. |
+| `41` | `list` | Multiple repository name matches found. |
+| `42` | `list` | Multiple repository path matches found. |
+| `43` | `list` | No matching repository found for query. |

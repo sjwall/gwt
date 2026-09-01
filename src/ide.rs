@@ -61,6 +61,28 @@ pub fn resolve_ide_command(override_ide: Option<&str>, config_dir: Option<&Path>
     }
 }
 
+/// Launches the configured IDE in the specified directory, unless the effective IDE is "none".
+pub fn launch_ide(
+    override_ide: Option<&str>,
+    dir: &Path,
+    config_dir: Option<&Path>,
+) -> io::Result<()> {
+    if let Some(ide_cmd) = resolve_ide_command(override_ide, config_dir) {
+        let status = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&ide_cmd)
+            .current_dir(dir)
+            .status()?;
+        if !status.success() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("IDE command '{ide_cmd}' failed with status: {status}"),
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,6 +170,26 @@ mod tests {
         if let Some(v) = orig {
             unsafe { std::env::set_var("GWT_IDE", v) };
         }
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_launch_ide() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_ide_mod_launch_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        // When IDE is "none", no command is executed
+        let res = launch_ide(Some("none"), &temp_dir, Some(&temp_dir));
+        assert!(res.is_ok());
+
+        // When a custom IDE command is executed
+        let test_file = temp_dir.join("launched.txt");
+        let res = launch_ide(Some("touch launched.txt"), &temp_dir, Some(&temp_dir));
+        assert!(res.is_ok());
+        assert!(test_file.exists());
+
         let _ = fs::remove_dir_all(&temp_dir);
     }
 }

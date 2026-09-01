@@ -16,6 +16,8 @@ enum Commands {
     // Track a git repository
     #[command(alias = "t")]
     Track(TrackArgs),
+    // View or set configuration options
+    Config(ConfigArgs),
 }
 
 #[derive(Args)]
@@ -30,6 +32,13 @@ struct TrackArgs {
     path: Option<String>,
 }
 
+#[derive(Args)]
+struct ConfigArgs {
+    // Configuration action or arguments (e.g. get, set, unset, or key [value])
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    args: Vec<String>,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -42,6 +51,12 @@ fn main() {
         }
         Commands::Track(args) => {
             if let Err(err) = gwt::commands::track::track_and_print(args.path.as_deref()) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Config(args) => {
+            if let Err(err) = gwt::commands::config::run_config(&args.args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }

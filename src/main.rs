@@ -20,6 +20,9 @@ enum Commands {
     // List tracked worktrees
     #[command(alias = "ls")]
     List(ListArgs),
+    // Remove a worktree
+    #[command(alias = "rm")]
+    Remove(RemoveArgs),
     // Track a git repository
     #[command(alias = "t")]
     Track(TrackArgs),
@@ -54,6 +57,13 @@ struct CdArgs {
 struct ListArgs {
     // Worktree name to match to limit the list to
     name: Option<String>,
+}
+
+#[derive(Args)]
+struct RemoveArgs {
+    // Worktree name to remove, and optional -f / --force / -force flags
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    args: Vec<String>,
 }
 
 #[derive(Args)]
@@ -102,6 +112,12 @@ fn main() {
             if let Err(err) = gwt::commands::list::list_and_print(args.name.as_deref()) {
                 eprintln!("gwt: {err}");
                 std::process::exit(1);
+            }
+        }
+        Commands::Remove(args) => {
+            if let Err(err) = gwt::commands::remove::run(&args.args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
             }
         }
         Commands::Track(args) => {

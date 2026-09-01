@@ -10,6 +10,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    // Create a new worktree branch
+    Add(AddArgs),
     // Switch to a worktree matching NAME
     Cd(CdArgs),
     // Switch to a worktree matching NAME and launch configured IDE
@@ -25,6 +27,13 @@ enum Commands {
     Config(ConfigArgs),
     // Get or set configured IDE (defaults to nvim)
     Ide(IdeArgs),
+}
+
+#[derive(Args)]
+struct AddArgs {
+    // Worktree name, and optional --ide and --no-install flags
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    args: Vec<String>,
 }
 
 #[derive(Args)]
@@ -71,6 +80,12 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
+        Commands::Add(args) => {
+            if let Err(err) = gwt::commands::add::run(&args.args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
         Commands::Cd(args) => {
             if let Err(err) = gwt::commands::cd::run(&args.args) {
                 eprintln!("gwt: {err}");

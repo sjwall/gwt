@@ -1,3 +1,4 @@
+pub mod add;
 pub mod cd;
 pub mod config;
 pub mod ide;

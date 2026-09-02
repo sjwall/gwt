@@ -15,6 +15,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * `gwt pull [--ide <ide>] [--no-install] <name>` / `gwt p [--ide <ide>] [--no-install] <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, launch configured IDE (supports `--ide <ide>` or `--ide none`, and `--no-install`).
 * `gwt cd <name>`: Switch to a worktree matching `<name>` (searches current repository and all tracked repositories).
 * `gwt main [<name>]` / `gwt m [<name>]`: Switch to the main repository matching `<name>` (defaults to the main repository of the current worktree; searches tracked repositories if `<name>` is provided).
+* `gwt M [<name>]` / `gwt M [--ide <ide>] [<name>]`: Switch to the main repository matching `<name>` and launch configured IDE (defaults to the main repository of the current worktree; searches tracked repositories if `<name>` is provided; supports `--ide <ide>` or `--ide none`).
 * `gwt switch [--ide <ide>] <name>` / `gwt s [--ide <ide>] <name>`: Switch to a worktree matching `<name>` and launch configured IDE (supports `--ide <ide>` or `--ide none`).
 * `gwt ls [<name>]` / `gwt list [<name>]`: List tracked worktrees (optionally filtered by repository `<name>`).
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
@@ -32,9 +33,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 
 `gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `switch`, `s`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `upgrade`)
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `upgrade`)
 * Worktree names and paths for `gwt cd`, `gwt switch`, and `gwt remove`
-* Tracked repository names and paths for `gwt main`
+* Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`
 * Branches for `gwt add`
 * Subcommands and configuration keys for `gwt config`

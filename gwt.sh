@@ -6,6 +6,7 @@
 #  gwt cd NAME                 cd to worktree matching NAME
 #  gwt main [NAME]             cd to main repository matching NAME (defaults to main repo of current worktree)
 #  gwt m [NAME]                as above
+#  gwt M [--ide IDE] [NAME]    as above, launch IDE
 #  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
 #  gwt s NAME                  as above
 #  gwt ls [NAME]               list tracked worktrees (matching repository NAME)
@@ -431,6 +432,40 @@ gwt() {
 
     echo "gwt: no matching repository found for '$query'" >&2
     return 10
+  }
+
+  _gwt_main_ide() {
+    local override_ide=""
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --ide=*)
+          override_ide="${1#--ide=}"
+          shift
+          ;;
+        --ide)
+          if [[ $# -lt 2 ]]; then
+            echo "gwt: --ide requires an argument" >&2
+            return 11
+          fi
+          override_ide="$2"
+          shift 2
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [[ ${#args[@]} -gt 1 ]]; then
+      echo "gwt: unknown command: 'M ${args[*]}'" >&2
+      return 6
+    fi
+
+    _gwt_main "${args[@]}" || return $?
+    _gwt_launch_ide "$override_ide"
   }
 
   _gwt_switch() {
@@ -932,6 +967,10 @@ gwt() {
         shift
         _gwt_main "$@"
         ;;
+      Main|M)
+        shift
+        _gwt_main_ide "$@"
+        ;;
       list|ls)
         shift
         _gwt_ls "$@"
@@ -961,7 +1000,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track 2>/dev/null
   }
 }
 

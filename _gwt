@@ -184,6 +184,7 @@ _gwt() {
     'cd:Change directory to worktree'
     'main:Change directory to main repository'
     'm:Alias for main'
+    'M:Switch to main repository and launch IDE'
     'switch:Switch to worktree and launch IDE'
     's:Alias for switch'
     'ls:List all tracked worktrees'
@@ -222,6 +223,11 @@ _gwt() {
           ;;
         main|m)
           _arguments \
+            '1:repository:->repositories' && return 0
+          ;;
+        Main|M)
+          _arguments \
+            '--ide=[Override IDE to launch]:IDE:_gwt_comp_ides' \
             '1:repository:->repositories' && return 0
           ;;
         remove|rm)

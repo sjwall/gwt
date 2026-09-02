@@ -12,6 +12,6 @@ A lightweight CLI tool to simplify creating, switching, and managing Git worktre
 
 ## Key Conventions & Agent Guidelines
 
-- **Headless Execution**: `gwt` launches an IDE by default (`nvim`, `code`, etc.) on commands like `add`, `pull`, and `switch`. Automated agents and non-interactive scripts must suppress IDE launch using `--ide none` or `GWT_IDE=none`.
+- **Headless Execution**: `gwt` launches an IDE by default (`nvim`, `code`, etc.) on commands like `add`, `pull`, `switch`, and `M`. Automated agents and non-interactive scripts must suppress IDE launch using `--ide none` or `GWT_IDE=none`.
 - **Shell Environment**: `gwt.sh` is written specifically for **Zsh** and uses Zsh syntax and parameter expansion.
 

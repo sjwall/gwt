@@ -14,7 +14,7 @@ When running as an automated agent, **always suppress the IDE launch** using `--
 
 ## Key Rule: Headless Execution
 
-Whenever executing commands that launch an IDE by default (`add`, `pull`, `switch`), you **must** supply `--ide none` or set `GWT_IDE=none`.
+Whenever executing commands that launch an IDE by default (`add`, `pull`, `switch`, `M`), you **must** supply `--ide none` or set `GWT_IDE=none`.
 
 ```bash
 # Preferred CLI flag:
@@ -69,14 +69,20 @@ gwt s --ide none <worktree-name>
 Changes directory to the main repository for the current worktree, or searches tracked repositories if a name is provided.
 
 ```bash
-# Return to the main repository for the current worktree:
+# Option A: Return to main repository without launching an IDE:
 gwt main
 # or shorthand:
 gwt m
 
+# Option B: Switch to main repository and launch IDE (or suppress IDE):
+# Do not run this yourself, you can use the above `m` command instead.
+gwt M
+gwt M --ide none
+
 # Switch to a specific main repository by name:
 gwt main <repo-name>
 gwt m <repo-name>
+gwt M --ide none <repo-name>
 ```
 
 ### 5. List Tracked Worktrees

@@ -17,6 +17,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * `gwt main [<name>]` / `gwt m [<name>]`: Switch to the main repository matching `<name>` (defaults to the main repository of the current worktree; searches tracked repositories if `<name>` is provided).
 * `gwt M [<name>]` / `gwt M [--ide <ide>] [<name>]`: Switch to the main repository matching `<name>` and launch configured IDE (defaults to the main repository of the current worktree; searches tracked repositories if `<name>` is provided; supports `--ide <ide>` or `--ide none`).
 * `gwt switch [--ide <ide>] <name>` / `gwt s [--ide <ide>] <name>`: Switch to a worktree matching `<name>` and launch configured IDE (supports `--ide <ide>` or `--ide none`).
+* `gwt agent [--agent <agent>] <name>` / `gwt a [--agent <agent>] <name>`: Switch to a worktree matching `<name>` and launch configured agent (prompts for agent command on first run if not configured; supports `--agent <agent>` or `--agent none`).
 * `gwt ls [<name>]` / `gwt list [<name>]`: List tracked worktrees (optionally filtered by repository `<name>`).
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
 * `gwt track [<path>]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository).
@@ -33,8 +34,8 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 
 `gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `upgrade`)
-* Worktree names and paths for `gwt cd`, `gwt switch`, and `gwt remove`
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `upgrade`)
+* Worktree names and paths for `gwt cd`, `gwt switch`, `gwt agent`, and `gwt remove`
 * Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`
 * Branches for `gwt add`
@@ -88,5 +89,13 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `36` | `track` | Not inside a git repository and no repository specified.
 | `37` | `track` | Invalid argument count (more than 1 argument provided).
 | `38` | `track` | Specified path is not a git repository.
+| `39` | `list` | Invalid argument count (more than 1 repository specified).
+| `40` | `list` | Multiple exact repository matches found.
+| `41` | `list` | Multiple repository name matches found.
+| `42` | `list` | Multiple repository path matches found.
+| `43` | `list` | No matching repository found for query.
+| `44` | `agent` | Missing required argument for `--agent` option.
+| `45` | `agent` | Invalid argument count (expected exactly 1 worktree name).
+| `46` | `agent` | No agent configured.
 |===
 

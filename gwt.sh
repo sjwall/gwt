@@ -9,6 +9,8 @@
 #  gwt M [--ide IDE] [NAME]    as above, launch IDE
 #  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
 #  gwt s NAME                  as above
+#  gwt agent [--agent AGENT] NAME cd to worktree matching NAME, launch agent
+#  gwt a NAME                  as above
 #  gwt ls [NAME]               list tracked worktrees (matching repository NAME)
 #  gwt list [NAME]             as above
 #  gwt remove [NAME]           remove worktree (defaults to current worktree, cd to main repo)
@@ -66,6 +68,9 @@
 #   41 - list: multiple repository name matches found
 #   42 - list: multiple repository path matches found
 #   43 - list: no matching repository found for query
+#   44 - agent: --agent option requires an argument
+#   45 - agent: invalid argument count (expected exactly 1 worktree name)
+#   46 - agent: no agent configured
 unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
@@ -229,6 +234,16 @@ gwt() {
       echo "$GWT_IDE"
     else
       echo "nvim"
+    fi
+  }
+
+  _gwt_get_agent() {
+    local agent
+    agent=$(_gwt_get_config "agent")
+    if [[ -n "$agent" ]]; then
+      echo "$agent"
+    elif [[ -n "$GWT_AGENT" ]]; then
+      echo "$GWT_AGENT"
     fi
   }
 
@@ -501,6 +516,51 @@ gwt() {
     local query="${args[1]}"
     _gwt_cd "$query" || return $?
     _gwt_launch_ide "$override_ide"
+  }
+
+  _gwt_agent() {
+    local override_agent=""
+    local args=()
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --agent=*)
+          override_agent="${1#--agent=}"
+          shift
+          ;;
+        --agent)
+          if [[ $# -lt 2 ]]; then
+            echo "gwt: --agent requires an argument" >&2
+            return 44
+          fi
+          override_agent="$2"
+          shift 2
+          ;;
+        --ide=*)
+          shift
+          ;;
+        --ide)
+          if [[ $# -lt 2 ]]; then
+            echo "gwt: --ide requires an argument" >&2
+            return 11
+          fi
+          shift 2
+          ;;
+        *)
+          args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [[ ${#args[@]} -ne 1 ]]; then
+      echo "gwt: unknown command: agent '${args[*]}'" >&2
+      return 45
+    fi
+
+    local query="${args[1]}"
+    _gwt_cd "$query" || return $?
+    _gwt_launch_agent "$override_agent"
   }
 
   _gwt_ls() {
@@ -799,6 +859,17 @@ gwt() {
           _gwt_get_ide
           return 0
         fi
+        if [[ "$key" == "agent" ]]; then
+          local agent
+          agent=$(_gwt_get_agent)
+          if [[ -n "$agent" ]]; then
+            echo "$agent"
+            return 0
+          else
+            echo "gwt: config key 'agent' not found" >&2
+            return 30
+          fi
+        fi
         local val
         val=$(_gwt_get_config "$key")
         if [[ -n "$val" ]]; then
@@ -840,6 +911,17 @@ gwt() {
             _gwt_get_ide
             return 0
           fi
+          if [[ "$key" == "agent" ]]; then
+            local agent
+            agent=$(_gwt_get_agent)
+            if [[ -n "$agent" ]]; then
+              echo "$agent"
+              return 0
+            else
+              echo "gwt: config key 'agent' not found" >&2
+              return 33
+            fi
+          fi
           local val
           val=$(_gwt_get_config "$key")
           if [[ -n "$val" ]]; then
@@ -868,6 +950,33 @@ gwt() {
       return 0
     fi
     eval "$ide_cmd"
+  }
+
+  _gwt_launch_agent() {
+    local override_agent="$1"
+    local agent_cmd="$override_agent"
+
+    if [[ -z "$agent_cmd" ]]; then
+      agent_cmd=$(_gwt_get_agent)
+    fi
+
+    if [[ -z "$agent_cmd" ]]; then
+      local user_agent
+      read -r "user_agent?Enter command to launch agent: "
+      if [[ -n "$user_agent" ]]; then
+        _gwt_save_config "agent" "$user_agent"
+        agent_cmd="$user_agent"
+      else
+        echo "gwt: no agent configured" >&2
+        return 46
+      fi
+    fi
+
+    if [[ "${agent_cmd:l}" == "none" ]]; then
+      return 0
+    fi
+
+    eval "$agent_cmd"
   }
 
   _gwt_init_ide() {
@@ -959,6 +1068,10 @@ gwt() {
         shift
         _gwt_switch "$@"
         ;;
+      agent|a)
+        shift
+        _gwt_agent "$@"
+        ;;
       cd)
         shift
         _gwt_cd "$@"
@@ -1000,7 +1113,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track 2>/dev/null
   }
 }
 

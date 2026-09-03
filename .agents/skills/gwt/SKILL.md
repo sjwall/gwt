@@ -24,6 +24,14 @@ gwt add --ide none <branch-name>
 GWT_IDE=none gwt add <branch-name>
 ```
 
+Similarly, commands that launch an agent (`agent`, `a`) can be suppressed using `--agent none` or the `GWT_AGENT=none` environment variable:
+
+```bash
+gwt a --agent none <worktree-name>
+# or
+GWT_AGENT=none gwt a <worktree-name>
+```
+
 ---
 
 ## Command Reference for Agents
@@ -65,7 +73,22 @@ gwt switch --ide none <worktree-name>
 gwt s --ide none <worktree-name>
 ```
 
-### 4. Switch to the Main Repository
+### 4. Switch to an Existing Worktree with Agent
+Changes directory to a worktree matching the specified query name and launches the configured agent. If no agent is configured, prompts to enter the launch command on first run.
+
+```bash
+# Option A: Launch configured agent
+gwt agent <worktree-name>
+# or shorthand:
+gwt a <worktree-name>
+
+# Option B: Suppress agent launch
+gwt agent --agent none <worktree-name>
+# or shorthand:
+gwt a --agent none <worktree-name>
+```
+
+### 5. Switch to the Main Repository
 Changes directory to the main repository for the current worktree, or searches tracked repositories if a name is provided.
 
 ```bash
@@ -85,7 +108,7 @@ gwt m <repo-name>
 gwt M --ide none <repo-name>
 ```
 
-### 5. List Tracked Worktrees
+### 6. List Tracked Worktrees
 Displays worktrees across tracked repositories, optionally filtered by repository name or query. Extra arguments (such as `--porcelain`) are passed through to `git worktree list`.
 
 ```bash
@@ -103,7 +126,7 @@ gwt ls --porcelain
 gwt ls <repo-name> --porcelain
 ```
 
-### 6. Remove a Worktree
+### 7. Remove a Worktree
 Deletes the specified worktree or the current worktree if run from within one (automatically changes directory to the main repository before removal).
 
 ```bash
@@ -122,7 +145,7 @@ gwt rm -f <worktree-name>
 gwt rm --force <worktree-name>
 ```
 
-### 7. Track a Git Repository
+### 8. Track a Git Repository
 Adds the current repository (or a specified repository path) to the list of tracked repositories.
 
 ```bash
@@ -136,7 +159,7 @@ gwt track /path/to/repo
 gwt t /path/to/repo
 ```
 
-### 8. Configuration Management
+### 9. Configuration Management
 Inspect, set, or remove configuration options:
 
 ```bash
@@ -158,7 +181,7 @@ gwt config unset <key>
 gwt config rm <key>
 ```
 
-### 9. Upgrade `gwt`
+### 10. Upgrade `gwt`
 Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 
 ```bash
@@ -240,3 +263,6 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `41` | `list` | Multiple repository name matches found. |
 | `42` | `list` | Multiple repository path matches found. |
 | `43` | `list` | No matching repository found for query. |
+| `44` | `agent` | Missing required argument for `--agent` option. |
+| `45` | `agent` | Invalid argument count (expected exactly 1 worktree name). |
+| `46` | `agent` | No agent configured. |

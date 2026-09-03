@@ -24,7 +24,7 @@ gwt add --ide none <branch-name>
 GWT_IDE=none gwt add <branch-name>
 ```
 
-Similarly, commands that launch an agent (`agent`, `a`) can be suppressed using `--agent none` or the `GWT_AGENT=none` environment variable:
+Similarly, commands that launch an agent (`agent`, `a`, or `add` with `--agent` / `-a`) can be suppressed using `--agent none`, `-a none`, or the `GWT_AGENT=none` environment variable:
 
 ```bash
 gwt a --agent none <worktree-name>
@@ -46,6 +46,18 @@ gwt --ide none <branch-name>
 
 # Skip running yarn / dependency installation:
 gwt add --ide none --no-install <branch-name>
+
+# Launch configured agent instead of IDE:
+gwt add --agent <branch-name>
+# or shorthand:
+gwt add -a <branch-name>
+
+# Launch a specific named agent instead of IDE:
+gwt add --agent cursor <branch-name>
+gwt add -a cursor <branch-name>
+
+# Suppress agent launch when using agent mode:
+gwt add -a none <branch-name>
 ```
 
 ### 2. Pull a Remote Branch into a Worktree

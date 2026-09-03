@@ -11,7 +11,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 
 == Commands
 
-* `gwt [add] [--ide <ide>] [--no-install] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`). Use `--ide <ide>` to override the IDE for this run only, or `--ide none` to skip launching the IDE. Use `--no-install` to skip running `yarn`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
+* `gwt [add] [--ide <ide>] [--agent [<agent>] | -a [<agent>]] [--no-install] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`) or configured agent. Use `--ide <ide>` to override the IDE for this run only, or `--ide none` to skip launching the IDE. Use `--agent` or `-a` (with or without a named agent, e.g. `--agent <agent>`, `-a <agent>`, `--agent=<agent>`, or `-a=<agent>`) to launch the agent instead of the IDE (supports `--agent none` or `-a none` to suppress launching). Use `--no-install` to skip running `yarn`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.
 * `gwt pull [--ide <ide>] [--no-install] <name>` / `gwt p [--ide <ide>] [--no-install] <name>`: Fetch `origin/<name>`, create a tracking worktree, cd, yarn, launch configured IDE (supports `--ide <ide>` or `--ide none`, and `--no-install`).
 * `gwt cd <name>`: Switch to a worktree matching `<name>` (searches current repository and all tracked repositories).
 * `gwt main [<name>]` / `gwt m [<name>]`: Switch to the main repository matching `<name>` (defaults to the main repository of the current worktree; searches tracked repositories if `<name>` is provided).
@@ -40,7 +40,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gw
 * Remote branches from `origin` for `gwt pull`
 * Branches for `gwt add`
 * Subcommands and configuration keys for `gwt config`
-* Configured IDE options for `gwt ide` and `--ide` flags
+* Configured IDE and agent options for `gwt ide`, `--ide`, and `--agent` / `-a` flags
 
 
 == Exit Codes

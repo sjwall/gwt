@@ -102,6 +102,7 @@ gwt a --agent none <worktree-name>
 
 ### 5. Switch to the Main Repository
 Changes directory to the main repository for the current worktree, or searches tracked repositories if a name is provided.
+If not in a repository and no name is provided, prompts to choose from tracked repositories (or switches automatically if only one exists).
 
 ```bash
 # Option A: Return to main repository without launching an IDE:

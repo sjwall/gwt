@@ -4,7 +4,7 @@
 #  gwt pull [--ide IDE] [--no-install] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
 #  gwt p NAME                  as above
 #  gwt cd NAME                 cd to worktree matching NAME
-#  gwt main [NAME]             cd to main repository matching NAME (defaults to main repo of current worktree)
+#  gwt main [NAME]             cd to main repository matching NAME (defaults to main repo of current worktree, or prompts/switches from tracked repos if not in repo)
 #  gwt m [NAME]                as above
 #  gwt M [--ide IDE] [NAME]    as above, launch IDE
 #  gwt switch [--ide IDE] NAME cd to worktree matching NAME, launch IDE
@@ -366,13 +366,78 @@ gwt() {
 
     if [[ $# -eq 0 ]]; then
       if [[ -n "$main_repo" ]]; then
-        cd "$main_repo"
+        cd "$main_repo" || return $?
         echo "$main_repo"
         return 0
-      else
+      fi
+
+      local options=()
+      local -A seen
+      if [[ -f "$repos_file" ]]; then
+        local r
+        while IFS= read -r r || [[ -n "$r" ]]; do
+          [[ -z "$r" || ! -d "$r" ]] && continue
+          [[ -n "${seen[$r]}" ]] && continue
+          git -C "$r" rev-parse --git-dir >/dev/null 2>&1 || continue
+          seen[$r]=1
+          options+=("$r")
+        done < "$repos_file"
+      fi
+
+      if [[ ${#options[@]} -eq 0 ]]; then
         echo "gwt: no matching repository found" >&2
         return 5
+      elif [[ ${#options[@]} -eq 1 ]]; then
+        cd "${options[1]}" || return $?
+        echo "${options[1]}"
+        return 0
       fi
+
+      echo "Select a repository to switch to:" >&2
+      local i
+      for (( i = 1; i <= ${#options[@]}; i++ )); do
+        echo "  $i) ${options[i]}" >&2
+      done
+
+      local choice
+      read -r "choice?Enter selection [1-${#options[@]}]: "
+      if [[ -z "$choice" ]]; then
+        echo "gwt: no repository selected" >&2
+        return 5
+      fi
+
+      local selected=""
+      if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+        selected="${options[choice]}"
+      else
+        local matches=()
+        local opt opt_name
+        for opt in "${options[@]}"; do
+          opt_name=$(basename "$opt")
+          if [[ "${opt_name:l}" == "${choice:l}" || "${opt:l}" == "${choice:l}" ]]; then
+            matches+=("$opt")
+          fi
+        done
+        if [[ ${#matches[@]} -eq 1 ]]; then
+          selected="${matches[1]}"
+        elif [[ ${#matches[@]} -gt 1 ]]; then
+          echo "gwt: multiple repositories match '$choice':" >&2
+          local m
+          for m in "${matches[@]}"; do
+            echo "  $m" >&2
+          done
+          return 7
+        fi
+      fi
+
+      if [[ -z "$selected" ]]; then
+        echo "gwt: invalid selection" >&2
+        return 5
+      fi
+
+      cd "$selected" || return $?
+      echo "$selected"
+      return 0
     elif [[ $# -gt 1 ]]; then
       echo "gwt: unknown command: 'main $*'" >&2
       return 6

@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use crate::config::{
@@ -114,6 +114,64 @@ pub fn is_unsuitable_path(path: &Path) -> bool {
     }
 
     false
+}
+
+/// Determines the worktree parent directory (`dir_gwt`) for a repository.
+///
+/// Prompts the user for a safe directory if the repository path is unsuitable.
+pub fn determine_dir_gwt<R: io::BufRead>(
+    target_repo: &Path,
+    config_dir: Option<&Path>,
+    mut prompt_reader: Option<&mut R>,
+) -> Option<PathBuf> {
+    let dir_name = target_repo
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("repo");
+    let gwt_dir_name = format!("gwt-{dir_name}");
+
+    if let Some(safe_parent) = get_configured_parent(target_repo, config_dir) {
+        return Some(safe_parent.join(&gwt_dir_name));
+    }
+
+    if is_unsuitable_path(target_repo) {
+        eprintln!(
+            "gwt: repository is in an unsuitable location ({})",
+            target_repo.display()
+        );
+
+        let input_opt = match prompt_reader.as_mut() {
+            Some(reader) => {
+                eprint!("Enter safe parent directory for worktrees (e.g. ~/projects): ");
+                let _ = io::stderr().flush();
+                let mut user_input = String::new();
+                if reader.read_line(&mut user_input).is_ok() {
+                    Some(user_input)
+                } else {
+                    None
+                }
+            }
+            None => inquire::Text::new("Enter safe parent directory for worktrees (e.g. ~/projects):")
+                .prompt()
+                .ok(),
+        };
+
+        if let Some(user_input) = input_opt {
+            let trimmed = user_input.trim();
+            if !trimmed.is_empty() {
+                let safe_parent = expand_tilde(trimmed);
+                let _ = save_configured_parent(target_repo, &safe_parent, config_dir);
+                return Some(safe_parent.join(&gwt_dir_name));
+            }
+        }
+
+        return None;
+    }
+
+    let parent = target_repo
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
+    Some(parent.join(&gwt_dir_name))
 }
 
 #[cfg(test)]

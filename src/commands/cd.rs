@@ -197,6 +197,13 @@ pub fn find_matching_worktree(
     Err(CdError::NoMatch(query.to_string()))
 }
 
+/// CLI arguments for the `cd` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct CdArgs {
+    /// Worktree name to match
+    pub name: String,
+}
+
 /// Executes the `cd` command with the provided argument slice, resolving the matching worktree path.
 pub fn cd_worktree(
     args: &[String],
@@ -213,11 +220,23 @@ pub fn cd_worktree(
     find_matching_worktree(query, current_dir, config_dir)
 }
 
+/// Runs the `cd` command with parsed `CdArgs` and prints the matching worktree path to stdout.
+pub fn cd_and_print_args(args: &CdArgs) -> Result<PathBuf, CdError> {
+    let path = find_matching_worktree(&args.name, None, None)?;
+    println!("{}", path.display());
+    Ok(path)
+}
+
 /// Runs the `cd` command and prints the matching worktree path to stdout.
 pub fn cd_and_print(args: &[String]) -> Result<PathBuf, CdError> {
     let path = cd_worktree(args, None, None)?;
     println!("{}", path.display());
     Ok(path)
+}
+
+/// Runs the `cd` command with parsed `CdArgs`.
+pub fn run_args(args: &CdArgs) -> Result<PathBuf, CdError> {
+    cd_and_print_args(args)
 }
 
 /// Runs the `cd` command with CLI arguments.

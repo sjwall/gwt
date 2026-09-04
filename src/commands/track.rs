@@ -93,6 +93,18 @@ pub fn track_and_print(path: Option<&str>) -> Result<PathBuf, TrackError> {
     Ok(repo)
 }
 
+/// CLI arguments for the `track` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct TrackArgs {
+    /// Path to the git repository to track (defaults to current repository)
+    pub path: Option<String>,
+}
+
+/// Runs the `track` command with parsed `TrackArgs`.
+pub fn run_args(args: &TrackArgs) -> Result<PathBuf, TrackError> {
+    track_and_print(args.path.as_deref())
+}
+
 /// Runs the `track` command with the provided path.
 pub fn run(path: Option<&str>) -> Result<PathBuf, TrackError> {
     track_and_print(path)

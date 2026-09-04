@@ -1,4 +1,13 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
+use gwt::commands::add::AddArgs;
+use gwt::commands::cd::CdArgs;
+use gwt::commands::config::ConfigArgs;
+use gwt::commands::ide::IdeArgs;
+use gwt::commands::list::ListArgs;
+use gwt::commands::pull::PullArgs;
+use gwt::commands::remove::RemoveArgs;
+use gwt::commands::switch::SwitchArgs;
+use gwt::commands::track::TrackArgs;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -10,80 +19,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    // Create a new worktree branch
+    /// Create a new worktree branch
+    #[command(alias = "a")]
     Add(AddArgs),
-    // Switch to a worktree matching NAME
+    /// Switch to a worktree matching NAME
     Cd(CdArgs),
-    // Switch to a worktree matching NAME and launch configured IDE
+    /// Fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
+    #[command(alias = "p")]
+    Pull(PullArgs),
+    /// Switch to a worktree matching NAME and launch configured IDE
     #[command(alias = "s")]
     Switch(SwitchArgs),
-    // List tracked worktrees
+    /// List tracked worktrees
     #[command(alias = "ls")]
     List(ListArgs),
-    // Remove a worktree
+    /// Remove a worktree
     #[command(alias = "rm")]
     Remove(RemoveArgs),
-    // Track a git repository
+    /// Track a git repository
     #[command(alias = "t")]
     Track(TrackArgs),
-    // View or set configuration options
+    /// View or set configuration options
     Config(ConfigArgs),
-    // Get or set configured IDE (defaults to nvim)
+    /// Get or set configured IDE (defaults to nvim)
     Ide(IdeArgs),
-}
-
-#[derive(Args)]
-struct AddArgs {
-    // Worktree name, and optional --ide and --no-install flags
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    args: Vec<String>,
-}
-
-#[derive(Args)]
-struct SwitchArgs {
-    // Worktree name to match and optional --ide flag
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    args: Vec<String>,
-}
-
-#[derive(Args)]
-struct CdArgs {
-    // Worktree name to match
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    args: Vec<String>,
-}
-
-#[derive(Args)]
-struct ListArgs {
-    // Worktree name to match to limit the list to
-    name: Option<String>,
-}
-
-#[derive(Args)]
-struct RemoveArgs {
-    // Worktree name to remove, and optional -f / --force / -force flags
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    args: Vec<String>,
-}
-
-#[derive(Args)]
-struct TrackArgs {
-    // Path to the git repository to track (defaults to current repository)
-    path: Option<String>,
-}
-
-#[derive(Args)]
-struct ConfigArgs {
-    // Configuration action or arguments (e.g. get, set, unset, or key [value])
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    args: Vec<String>,
-}
-
-#[derive(Args)]
-struct IdeArgs {
-    // IDE command or name to configure (e.g. nvim, code, cursor, none)
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-    ide: Vec<String>,
 }
 
 fn main() {
@@ -91,49 +50,55 @@ fn main() {
 
     match &cli.command {
         Commands::Add(args) => {
-            if let Err(err) = gwt::commands::add::run(&args.args) {
+            if let Err(err) = gwt::commands::add::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
         }
         Commands::Cd(args) => {
-            if let Err(err) = gwt::commands::cd::run(&args.args) {
+            if let Err(err) = gwt::commands::cd::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Pull(args) => {
+            if let Err(err) = gwt::commands::pull::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
         }
         Commands::Switch(args) => {
-            if let Err(err) = gwt::commands::switch::run(&args.args) {
+            if let Err(err) = gwt::commands::switch::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
         }
         Commands::List(args) => {
-            if let Err(err) = gwt::commands::list::list_and_print(args.name.as_deref()) {
+            if let Err(err) = gwt::commands::list::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(1);
             }
         }
         Commands::Remove(args) => {
-            if let Err(err) = gwt::commands::remove::run(&args.args) {
+            if let Err(err) = gwt::commands::remove::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
         }
         Commands::Track(args) => {
-            if let Err(err) = gwt::commands::track::track_and_print(args.path.as_deref()) {
+            if let Err(err) = gwt::commands::track::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
         }
         Commands::Config(args) => {
-            if let Err(err) = gwt::commands::config::run_config(&args.args) {
+            if let Err(err) = gwt::commands::config::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
         }
         Commands::Ide(args) => {
-            if let Err(err) = gwt::commands::ide::run(&args.ide) {
+            if let Err(err) = gwt::commands::ide::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }

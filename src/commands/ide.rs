@@ -84,6 +84,19 @@ pub fn ide_and_print(args: &[String]) -> Result<(), IdeError> {
     Ok(())
 }
 
+/// CLI arguments for the `ide` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct IdeArgs {
+    /// IDE command or name to configure (e.g. nvim, code, cursor, none)
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub ide: Vec<String>,
+}
+
+/// Runs the `ide` command with parsed `IdeArgs`.
+pub fn run_args(args: &IdeArgs) -> Result<(), IdeError> {
+    ide_and_print(&args.ide)
+}
+
 /// Runs the `ide` command with the provided argument slice.
 pub fn run(args: &[String]) -> Result<(), IdeError> {
     ide_and_print(args)

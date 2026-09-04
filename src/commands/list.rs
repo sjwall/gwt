@@ -60,6 +60,18 @@ pub fn list_and_print(filter: Option<&str>) -> io::Result<()> {
     Ok(())
 }
 
+/// CLI arguments for the `list` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct ListArgs {
+    /// Worktree name to match to limit the list to
+    pub name: Option<String>,
+}
+
+/// Runs the `list` command with parsed `ListArgs`.
+pub fn run_args(args: &ListArgs) -> io::Result<()> {
+    list_and_print(args.name.as_deref())
+}
+
 /// Runs the `list` command with the provided filter.
 pub fn run(filter: Option<&str>) -> io::Result<()> {
     list_and_print(filter)

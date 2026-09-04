@@ -1,13 +1,10 @@
 use std::fmt;
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::config::expand_tilde;
 use crate::ide::launch_ide;
-use crate::locations::{
-    get_configured_parent, is_unsuitable_path, save_configured_parent,
-};
+use crate::locations::determine_dir_gwt;
 use crate::repos::{auto_track_repo, get_current_main_repo};
 
 /// Error types that can occur during the `add` command.
@@ -99,16 +96,25 @@ impl From<io::Error> for AddError {
     }
 }
 
-/// Parsed arguments for the `add` command.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AddParsedArgs {
-    pub branch: String,
-    pub override_ide: Option<String>,
+/// CLI arguments for the `add` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct AddArgs {
+    /// Override configured IDE (e.g. nvim, code, cursor, none)
+    #[arg(long)]
+    pub ide: Option<String>,
+
+    /// Skip running yarn install
+    #[arg(long)]
     pub no_install: bool,
+
+    /// Branch name for the new worktree
+    pub branch: String,
 }
 
+pub type AddParsedArgs = AddArgs;
+
 /// Parses CLI arguments for the `add` command, supporting `--ide <IDE>`, `--ide=<IDE>`, and `--no-install`.
-pub fn parse_add_args(args: &[String]) -> Result<AddParsedArgs, AddError> {
+pub fn parse_add_args(args: &[String]) -> Result<AddArgs, AddError> {
     let mut override_ide = None;
     let mut no_install = false;
     let mut positional = Vec::new();
@@ -143,9 +149,9 @@ pub fn parse_add_args(args: &[String]) -> Result<AddParsedArgs, AddError> {
         return Err(AddError::InvalidArgCount(String::new()));
     }
 
-    Ok(AddParsedArgs {
+    Ok(AddArgs {
         branch,
-        override_ide,
+        ide: override_ide,
         no_install,
     })
 }
@@ -154,59 +160,21 @@ pub fn parse_add_args(args: &[String]) -> Result<AddParsedArgs, AddError> {
 pub fn get_dir_gwt<R: io::BufRead>(
     target_repo: &Path,
     config_dir: Option<&Path>,
-    mut prompt_reader: Option<&mut R>,
+    prompt_reader: Option<&mut R>,
 ) -> Result<PathBuf, AddError> {
-    let dir_name = target_repo
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("repo");
-    let gwt_dir_name = format!("gwt-{dir_name}");
-
-    if let Some(safe_parent) = get_configured_parent(target_repo, config_dir) {
-        return Ok(safe_parent.join(&gwt_dir_name));
-    }
-
-    if is_unsuitable_path(target_repo) {
-        eprintln!(
-            "gwt: repository is in an unsuitable location ({})",
-            target_repo.display()
-        );
-        eprint!("Enter safe parent directory for worktrees (e.g. ~/projects): ");
-        let _ = io::stderr().flush();
-
-        let mut user_input = String::new();
-        let read_success = match prompt_reader.as_mut() {
-            Some(reader) => reader.read_line(&mut user_input).is_ok(),
-            None => io::stdin().read_line(&mut user_input).is_ok(),
-        };
-
-        let trimmed = user_input.trim();
-        if read_success && !trimmed.is_empty() {
-            let safe_parent = expand_tilde(trimmed);
-            let _ = save_configured_parent(target_repo, &safe_parent, config_dir);
-            return Ok(safe_parent.join(&gwt_dir_name));
-        }
-
-        return Err(AddError::DetermineTargetLocation);
-    }
-
-    let parent = target_repo
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
-    Ok(parent.join(&gwt_dir_name))
+    determine_dir_gwt(target_repo, config_dir, prompt_reader)
+        .ok_or(AddError::DetermineTargetLocation)
 }
 
 /// Creates a new worktree for the specified branch name, running `yarn` if `yarn.lock` exists,
 /// and launching the configured IDE unless disabled.
-pub fn add_worktree<R: io::BufRead>(
-    args: &[String],
+pub fn add_worktree_args<R: io::BufRead>(
+    parsed: &AddArgs,
     current_dir: Option<&Path>,
     config_dir: Option<&Path>,
     launch: bool,
     prompt_reader: Option<&mut R>,
 ) -> Result<PathBuf, AddError> {
-    let parsed = parse_add_args(args)?;
-
     let main_repo = get_current_main_repo(current_dir);
     if let Some(ref main) = main_repo {
         let _ = auto_track_repo(main, config_dir);
@@ -252,10 +220,28 @@ pub fn add_worktree<R: io::BufRead>(
     }
 
     if launch {
-        launch_ide(parsed.override_ide.as_deref(), &dest, config_dir)?;
+        launch_ide(parsed.ide.as_deref(), &dest, config_dir)?;
     }
 
     Ok(dest)
+}
+
+/// Creates a new worktree for the specified branch name, running `yarn` if `yarn.lock` exists,
+/// and launching the configured IDE unless disabled.
+pub fn add_worktree<R: io::BufRead>(
+    args: &[String],
+    current_dir: Option<&Path>,
+    config_dir: Option<&Path>,
+    launch: bool,
+    prompt_reader: Option<&mut R>,
+) -> Result<PathBuf, AddError> {
+    let parsed = parse_add_args(args)?;
+    add_worktree_args(&parsed, current_dir, config_dir, launch, prompt_reader)
+}
+
+/// Runs the `add` command with parsed `AddArgs`.
+pub fn run_args(args: &AddArgs) -> Result<PathBuf, AddError> {
+    add_worktree_args(args, None, None, true, None::<&mut io::Empty>)
 }
 
 /// Runs the `add` command with CLI arguments.
@@ -269,6 +255,8 @@ mod tests {
     use std::fs;
     use std::io::Cursor;
     use std::process::Command;
+
+    use crate::locations::{get_configured_parent, save_configured_parent};
 
     fn init_git_repo(path: &Path) {
         fs::create_dir_all(path).unwrap();
@@ -305,9 +293,9 @@ mod tests {
         let p1 = parse_add_args(&["my-branch".into()]).unwrap();
         assert_eq!(
             p1,
-            AddParsedArgs {
+            AddArgs {
                 branch: "my-branch".into(),
-                override_ide: None,
+                ide: None,
                 no_install: false,
             }
         );
@@ -315,9 +303,9 @@ mod tests {
         let p2 = parse_add_args(&["--ide".into(), "code".into(), "feat-x".into()]).unwrap();
         assert_eq!(
             p2,
-            AddParsedArgs {
+            AddArgs {
                 branch: "feat-x".into(),
-                override_ide: Some("code".into()),
+                ide: Some("code".into()),
                 no_install: false,
             }
         );
@@ -325,9 +313,9 @@ mod tests {
         let p3 = parse_add_args(&["--ide=cursor".into(), "--no-install".into(), "feat-y".into()]).unwrap();
         assert_eq!(
             p3,
-            AddParsedArgs {
+            AddArgs {
                 branch: "feat-y".into(),
-                override_ide: Some("cursor".into()),
+                ide: Some("cursor".into()),
                 no_install: true,
             }
         );
@@ -335,9 +323,9 @@ mod tests {
         let p4 = parse_add_args(&["feat-z".into(), "--no-install".into(), "--ide".into(), "none".into()]).unwrap();
         assert_eq!(
             p4,
-            AddParsedArgs {
+            AddArgs {
                 branch: "feat-z".into(),
-                override_ide: Some("none".into()),
+                ide: Some("none".into()),
                 no_install: true,
             }
         );

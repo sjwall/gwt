@@ -8,7 +8,7 @@ A lightweight CLI tool to simplify creating, switching, and managing Git worktre
 - **`./_gwt`**: Standalone Zsh autocompletion file (`#compdef gwt`) for autoloading and plugin managers.
 - **`./install.sh`**: POSIX shell installation and upgrade script.
 - **`./README.adoc`**: Project documentation, command reference, configuration paths, and exit codes.
-- **`./agents/skills/gwt`**: Skill for agents using this tool.
+- **`./.agents/skills/gwt`**: Skill for agents using this tool.
 
 ## Key Conventions & Agent Guidelines
 

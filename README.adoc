@@ -9,6 +9,57 @@ A git worktree helper...
 curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh
 ----
 
+The installer:
+* Clones or updates the `gwt` repository into `~/.local/share/gwt` (or `$GWT_DIR`).
+* Adds the sourcing line to your shell configuration (`.zshrc`, `.bashrc`, etc.).
+* Prompts you to optionally symlink bundled agent skills to your global agent configurations.
+
+=== Agent Skills Symlinking
+
+During installation, you can link the `gwt` skill to your global agent environments:
+
+* `1) agents`: Symlinks to `${AGENTS_CONFIG_DIR:-~/.agents}/skills`
+* `2) opencode`: Symlinks to `${OPENCODE_CONFIG_DIR:-~/.config/opencode}/skills`
+* `3) claude`: Symlinks to `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`
+* `4) gemini`: Symlinks to `${ANTIGRAVITY_CONFIG_DIR:-~/.gemini/antigravity-cli}/skills` and `${GEMINI_CONFIG_DIR:-~/.gemini/config}/skills`
+* `5) all`: Symlinks to all supported environments
+* `6) none`: Skips symlinking (default when pressing Enter)
+
+You can select multiple targets by number or name (e.g. `1,3`, `claude, gemini`, or `all`).
+
+=== Installer Options & Unattended Install
+
+You can pass arguments to the installer or configure it using environment variables:
+
+[source,sh]
+----
+# Install with all agent skills symlinked
+curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -- --skills=all
+
+# Install for specific agents without prompting
+curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -- --skills=claude,gemini
+
+# Skip skill symlinking
+curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -- --no-skills
+
+# Run locally from a cloned repository
+./install.sh --skills=all
+----
+
+==== Command Line Options
+
+* `--skills=<targets>`: Comma-separated list of targets to link (`agents`, `opencode`, `claude`, `gemini`, `all`, `none`).
+* `--no-skills`: Skip skills symlinking (same as `--skills=none`).
+* `--dir=<path>`: Custom installation directory (default: `~/.local/share/gwt`).
+* `-h`, `--help`: Show installer help and options.
+
+==== Environment Variables
+
+* `GWT_SKILLS`: Target list for skills symlinking (e.g. `GWT_SKILLS="all"` or `GWT_SKILLS="agents,claude"`). Useful for non-interactive or automated installs.
+* `GWT_DIR`: Custom install directory (default: `${XDG_DATA_HOME:-~/.local/share}/gwt`).
+* `GWT_REPO_URL`: Custom repository clone URL.
+* `GWT_BRANCH`: Git branch to install (default: `main`).
+
 == Commands
 
 * `gwt [add] [--ide <ide>] [--agent [<agent>] | -a [<agent>]] [--no-install] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`) or configured agent. Use `--ide <ide>` to override the IDE for this run only, or `--ide none` to skip launching the IDE. Use `--agent` or `-a` (with or without a named agent, e.g. `--agent <agent>`, `-a <agent>`, `--agent=<agent>`, or `-a=<agent>`) to launch the agent instead of the IDE (supports `--agent none` or `-a none` to suppress launching). Use `--no-install` to skip running `yarn`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.

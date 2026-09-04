@@ -48,6 +48,59 @@ error() {
   printf "${RED}error:${RESET} %s\n" "$1" >&2
 }
 
+# Parse command line options
+SKILLS_ARG=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skills=*)
+      SKILLS_ARG="${1#--skills=}"
+      shift
+      ;;
+    --skills)
+      if [ $# -gt 1 ]; then
+        SKILLS_ARG="$2"
+        shift 2
+      else
+        error "--skills requires an argument"
+        exit 1
+      fi
+      ;;
+    --no-skills)
+      SKILLS_ARG="none"
+      shift
+      ;;
+    --dir=*)
+      INSTALL_DIR="${1#--dir=}"
+      shift
+      ;;
+    --dir)
+      if [ $# -gt 1 ]; then
+        INSTALL_DIR="$2"
+        shift 2
+      else
+        error "--dir requires an argument"
+        exit 1
+      fi
+      ;;
+    -h|--help)
+      echo "Usage: install.sh [OPTIONS]"
+      echo ""
+      echo "Options:"
+      echo "  --skills=<targets>   Symlink skills to global agent directories"
+      echo "                       (comma-separated: agents, opencode, claude, gemini, all, none)"
+      echo "  --no-skills          Skip symlinking skills (same as --skills=none)"
+      echo "  --dir=<path>         Installation directory (default: ~/.local/share/gwt)"
+      echo "  -h, --help           Show this help message"
+      exit 0
+      ;;
+    *)
+      warn "Unknown option: $1"
+      shift
+      ;;
+  esac
+done
+
 IS_UPGRADE=0
 
 # Create parent directory if needed
@@ -74,10 +127,14 @@ elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
     curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
     curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
     curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
+    mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
+    curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
   elif command -v wget >/dev/null 2>&1; then
     wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
     wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
     wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
+    mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
+    wget -qO "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" "$RAW_URL/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
   else
     warn "Neither curl nor wget was found to update files. Keeping existing files."
   fi
@@ -92,12 +149,16 @@ else
     curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
     curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
     curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
+    mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
+    curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
   elif command -v wget >/dev/null 2>&1; then
     info "Downloading gwt.sh..."
     mkdir -p "$INSTALL_DIR"
     wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
     wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
     wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
+    mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
+    wget -qO "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" "$RAW_URL/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
   else
     error "Neither git, curl, nor wget was found. Please install one of them and try again."
     exit 1
@@ -152,6 +213,216 @@ else
   } >> "$PROFILE_FILE"
   success "Added gwt to $PROFILE_FILE"
 fi
+
+# Skills management
+is_interactive() {
+  if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]; then
+    return 0
+  fi
+  if [ -t 0 ]; then
+    return 0
+  fi
+  return 1
+}
+
+LINK_AGENTS=0
+LINK_OPENCODE=0
+LINK_CLAUDE=0
+LINK_GEMINI=0
+
+parse_skills_selection() {
+  _input="$1"
+  LINK_AGENTS=0
+  LINK_OPENCODE=0
+  LINK_CLAUDE=0
+  LINK_GEMINI=0
+
+  _cleaned="$(printf "%s" "$_input" | tr ',;' '  ' | tr '[:upper:]' '[:lower:]')"
+
+  for _token in $_cleaned; do
+    case "$_token" in
+      1|agents|agent)
+        LINK_AGENTS=1
+        ;;
+      2|opencode)
+        LINK_OPENCODE=1
+        ;;
+      3|claude)
+        LINK_CLAUDE=1
+        ;;
+      4|gemini|antigravity|agy|yourself)
+        LINK_GEMINI=1
+        ;;
+      5|all)
+        LINK_AGENTS=1
+        LINK_OPENCODE=1
+        LINK_CLAUDE=1
+        LINK_GEMINI=1
+        ;;
+      1-4)
+        LINK_AGENTS=1
+        LINK_OPENCODE=1
+        LINK_CLAUDE=1
+        LINK_GEMINI=1
+        ;;
+      0|6|none|no|n|skip)
+        LINK_AGENTS=0
+        LINK_OPENCODE=0
+        LINK_CLAUDE=0
+        LINK_GEMINI=0
+        return 0
+        ;;
+      "")
+        ;;
+      *)
+        warn "Unknown skill target: '$_token'"
+        ;;
+    esac
+  done
+}
+
+symlink_skill() {
+  _src="$1"
+  _dest_dir="$2"
+  _name="$(basename "$_src")"
+  _target="$_dest_dir/$_name"
+
+  case "$_target" in
+    "$HOME"/*)
+      _disp_target="~/${_target#"$HOME"/}"
+      ;;
+    *)
+      _disp_target="$_target"
+      ;;
+  esac
+  case "$_src" in
+    "$HOME"/*)
+      _disp_src="~/${_src#"$HOME"/}"
+      ;;
+    *)
+      _disp_src="$_src"
+      ;;
+  esac
+
+  mkdir -p "$_dest_dir"
+
+  if [ -L "$_target" ]; then
+    _current="$(readlink "$_target" 2>/dev/null || true)"
+    if [ "$_current" = "$_src" ]; then
+      info "Skill '$_name' is already linked in $_disp_target"
+      return 0
+    fi
+    rm -f "$_target"
+    ln -s "$_src" "$_target"
+    success "Updated symlink: $_disp_target -> $_disp_src"
+  elif [ -e "$_target" ]; then
+    warn "$_disp_target exists and is not a symlink; skipping"
+  else
+    ln -s "$_src" "$_target"
+    success "Symlinked: $_disp_target -> $_disp_src"
+  fi
+}
+
+apply_skills_symlinks() {
+  if [ "$LINK_AGENTS" -eq 0 ] && [ "$LINK_OPENCODE" -eq 0 ] && [ "$LINK_CLAUDE" -eq 0 ] && [ "$LINK_GEMINI" -eq 0 ]; then
+    return 0
+  fi
+
+  _skills_src="$INSTALL_DIR/.agents/skills"
+  if [ ! -d "$_skills_src" ] && [ -d "./.agents/skills" ]; then
+    _skills_src="$(pwd)/.agents/skills"
+  fi
+
+  if [ ! -d "$_skills_src" ]; then
+    warn "Skills directory not found at $_skills_src; skipping skill symlinking."
+    return 0
+  fi
+
+  echo ""
+  info "Symlinking skills..."
+
+  if [ "$LINK_AGENTS" -eq 1 ]; then
+    _agents_dir="${AGENTS_CONFIG_DIR:-$HOME/.agents}/skills"
+    for _skill in "$_skills_src"/*; do
+      [ -d "$_skill" ] || continue
+      symlink_skill "$_skill" "$_agents_dir"
+    done
+  fi
+
+  if [ "$LINK_OPENCODE" -eq 1 ]; then
+    _opencode_dir="${OPENCODE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/skills"
+    for _skill in "$_skills_src"/*; do
+      [ -d "$_skill" ] || continue
+      symlink_skill "$_skill" "$_opencode_dir"
+    done
+  fi
+
+  if [ "$LINK_CLAUDE" -eq 1 ]; then
+    _claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+    for _skill in "$_skills_src"/*; do
+      [ -d "$_skill" ] || continue
+      symlink_skill "$_skill" "$_claude_dir"
+    done
+  fi
+
+  if [ "$LINK_GEMINI" -eq 1 ]; then
+    if [ -n "$GEMINI_SKILLS_DIR" ]; then
+      for _skill in "$_skills_src"/*; do
+        [ -d "$_skill" ] || continue
+        symlink_skill "$_skill" "$GEMINI_SKILLS_DIR"
+      done
+    elif [ -n "$ANTIGRAVITY_SKILLS_DIR" ]; then
+      for _skill in "$_skills_src"/*; do
+        [ -d "$_skill" ] || continue
+        symlink_skill "$_skill" "$ANTIGRAVITY_SKILLS_DIR"
+      done
+    else
+      _agy_dir="${ANTIGRAVITY_CONFIG_DIR:-$HOME/.gemini/antigravity-cli}/skills"
+      _gemini_dir="${GEMINI_CONFIG_DIR:-$HOME/.gemini/config}/skills"
+      for _skill in "$_skills_src"/*; do
+        [ -d "$_skill" ] || continue
+        symlink_skill "$_skill" "$_agy_dir"
+        symlink_skill "$_skill" "$_gemini_dir"
+      done
+    fi
+  fi
+}
+
+# Configure skills symlinks
+SKILLS_TARGETS="${SKILLS_ARG:-$GWT_SKILLS}"
+
+if [ -n "$SKILLS_TARGETS" ]; then
+  parse_skills_selection "$SKILLS_TARGETS"
+elif is_interactive; then
+  echo ""
+  info "Symlink skills to global agent directories?"
+  echo "Select targets to link skills (comma-separated or numbers):"
+  echo "  1) agents       (~/.agents/skills)"
+  echo "  2) opencode     (~/.config/opencode/skills)"
+  echo "  3) claude       (~/.claude/skills)"
+  echo "  4) gemini       (~/.gemini/antigravity-cli/skills, ~/.gemini/config/skills)"
+  echo "  5) all"
+  echo "  6) none"
+  echo ""
+  if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]; then
+    printf "Enter choice(s) [default: none]: " > /dev/tty
+    read -r SKILLS_CHOICE < /dev/tty || SKILLS_CHOICE=""
+  elif [ -t 0 ]; then
+    printf "Enter choice(s) [default: none]: "
+    read -r SKILLS_CHOICE || SKILLS_CHOICE=""
+  else
+    SKILLS_CHOICE="none"
+  fi
+  [ -z "$SKILLS_CHOICE" ] && SKILLS_CHOICE="none"
+  parse_skills_selection "$SKILLS_CHOICE"
+else
+  LINK_AGENTS=0
+  LINK_OPENCODE=0
+  LINK_CLAUDE=0
+  LINK_GEMINI=0
+fi
+
+apply_skills_symlinks
 
 echo ""
 if [ "$IS_UPGRADE" -eq 1 ]; then

@@ -42,6 +42,9 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 # Skip skill symlinking
 curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -- --no-skills
 
+# Perform a dry run without making changes
+curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -- --dry-run
+
 # Run locally from a cloned repository
 ./install.sh --skills=all
 ----
@@ -51,6 +54,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `--skills=<targets>`: Comma-separated list of targets to link (`agents`, `opencode`, `claude`, `gemini`, `all`, `none`).
 * `--no-skills`: Skip skills symlinking (same as `--skills=none`).
 * `--dir=<path>`: Custom installation directory (default: `~/.local/share/gwt`).
+* `-n`, `--dry-run`: Perform a dry run without making any changes.
 * `-h`, `--help`: Show installer help and options.
 
 ==== Environment Variables

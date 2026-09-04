@@ -69,15 +69,21 @@ impl From<io::Error> for SwitchError {
     }
 }
 
-/// Parsed arguments for the `switch` command.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SwitchParsedArgs {
+/// CLI arguments for the `switch` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct SwitchArgs {
+    /// Override configured IDE (e.g. nvim, code, cursor, none)
+    #[arg(long)]
+    pub ide: Option<String>,
+
+    /// Worktree name to match
     pub query: String,
-    pub override_ide: Option<String>,
 }
 
+pub type SwitchParsedArgs = SwitchArgs;
+
 /// Parses CLI arguments for the `switch` command, supporting `--ide <IDE>` / `--ide=<IDE>`.
-pub fn parse_switch_args(args: &[String]) -> Result<SwitchParsedArgs, SwitchError> {
+pub fn parse_switch_args(args: &[String]) -> Result<SwitchArgs, SwitchError> {
     let mut override_ide = None;
     let mut positional = Vec::new();
     let mut i = 0;
@@ -108,10 +114,27 @@ pub fn parse_switch_args(args: &[String]) -> Result<SwitchParsedArgs, SwitchErro
         return Err(SwitchError::InvalidArgCount(String::new()));
     }
 
-    Ok(SwitchParsedArgs {
+    Ok(SwitchArgs {
         query,
-        override_ide,
+        ide: override_ide,
     })
+}
+
+/// Resolves the worktree for the `switch` command with parsed `SwitchArgs` and optionally launches the IDE.
+/// Returns the matched worktree path on success.
+pub fn switch_worktree_args(
+    parsed: &SwitchArgs,
+    current_dir: Option<&Path>,
+    config_dir: Option<&Path>,
+    launch: bool,
+) -> Result<PathBuf, SwitchError> {
+    let path = find_matching_worktree(&parsed.query, current_dir, config_dir)?;
+
+    if launch {
+        launch_ide(parsed.ide.as_deref(), &path, config_dir)?;
+    }
+
+    Ok(path)
 }
 
 /// Resolves the worktree for the `switch` command and optionally launches the IDE.
@@ -123,27 +146,31 @@ pub fn switch_worktree(
     launch: bool,
 ) -> Result<PathBuf, SwitchError> {
     let parsed = parse_switch_args(args)?;
-    let path = find_matching_worktree(&parsed.query, current_dir, config_dir)?;
+    switch_worktree_args(&parsed, current_dir, config_dir, launch)
+}
 
-    if launch {
-        launch_ide(parsed.override_ide.as_deref(), &path, config_dir)?;
-    }
-
+/// Runs the `switch` command with parsed `SwitchArgs`, printing the matching worktree path to standard output and launching the IDE.
+pub fn switch_and_print_args(parsed: &SwitchArgs) -> Result<PathBuf, SwitchError> {
+    let path = find_matching_worktree(&parsed.query, None, None)?;
+    println!("{}", path.display());
+    launch_ide(parsed.ide.as_deref(), &path, None)?;
     Ok(path)
 }
 
 /// Runs the `switch` command, printing the matching worktree path to standard output and launching the IDE.
 pub fn switch_and_print(args: &[String]) -> Result<PathBuf, SwitchError> {
     let parsed = parse_switch_args(args)?;
-    let path = find_matching_worktree(&parsed.query, None, None)?;
-    println!("{}", path.display());
-    launch_ide(parsed.override_ide.as_deref(), &path, None)?;
-    Ok(path)
+    switch_and_print_args(&parsed)
+}
+
+/// Runs the `switch` command with parsed `SwitchArgs`.
+pub fn run_args(args: &SwitchArgs) -> Result<PathBuf, SwitchError> {
+    switch_worktree_args(args, None, None, true)
 }
 
 /// Runs the `switch` command with CLI arguments.
 pub fn run(args: &[String]) -> Result<PathBuf, SwitchError> {
-    switch_and_print(args)
+    switch_worktree(args, None, None, true)
 }
 
 #[cfg(test)]
@@ -195,36 +222,36 @@ mod tests {
         let p1 = parse_switch_args(&["--ide".into(), "code".into(), "my-branch".into()]).unwrap();
         assert_eq!(
             p1,
-            SwitchParsedArgs {
+            SwitchArgs {
                 query: "my-branch".into(),
-                override_ide: Some("code".into()),
+                ide: Some("code".into()),
             }
         );
 
         let p2 = parse_switch_args(&["--ide=cursor".into(), "feat-x".into()]).unwrap();
         assert_eq!(
             p2,
-            SwitchParsedArgs {
+            SwitchArgs {
                 query: "feat-x".into(),
-                override_ide: Some("cursor".into()),
+                ide: Some("cursor".into()),
             }
         );
 
         let p3 = parse_switch_args(&["feat-y".into(), "--ide=none".into()]).unwrap();
         assert_eq!(
             p3,
-            SwitchParsedArgs {
+            SwitchArgs {
                 query: "feat-y".into(),
-                override_ide: Some("none".into()),
+                ide: Some("none".into()),
             }
         );
 
         let p4 = parse_switch_args(&["feat-z".into()]).unwrap();
         assert_eq!(
             p4,
-            SwitchParsedArgs {
+            SwitchArgs {
                 query: "feat-z".into(),
-                override_ide: None,
+                ide: None,
             }
         );
     }

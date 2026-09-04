@@ -179,6 +179,19 @@ pub fn run_config(args: &[String]) -> Result<(), ConfigError> {
     Ok(())
 }
 
+/// CLI arguments for the `config` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct ConfigArgs {
+    /// Configuration action or arguments (e.g. get <key>, set <key> <val>, unset <key>, or <key> [value])
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub args: Vec<String>,
+}
+
+/// Runs the `config` command with parsed `ConfigArgs`.
+pub fn run_args(args: &ConfigArgs) -> Result<(), ConfigError> {
+    run_config(&args.args)
+}
+
 /// Default entrypoint for the `config` command.
 pub fn run(args: &[String]) -> Result<(), ConfigError> {
     run_config(args)

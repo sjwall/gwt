@@ -70,15 +70,21 @@ impl From<io::Error> for RemoveError {
     }
 }
 
-/// Parsed arguments for the `remove` command.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RemoveParsedArgs {
+/// CLI arguments for the `remove` command parsed by `clap`.
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+pub struct RemoveArgs {
+    /// Force deletion of worktree even if dirty
+    #[arg(short, long)]
     pub force: bool,
+
+    /// Worktree names or paths to remove (defaults to current directory if omitted)
     pub targets: Vec<String>,
 }
 
+pub type RemoveParsedArgs = RemoveArgs;
+
 /// Parses CLI arguments for the `remove` command, supporting `-f`, `--force`, and `-force`.
-pub fn parse_remove_args(args: &[String]) -> RemoveParsedArgs {
+pub fn parse_remove_args(args: &[String]) -> RemoveArgs {
     let mut force = false;
     let mut targets = Vec::new();
 
@@ -93,7 +99,7 @@ pub fn parse_remove_args(args: &[String]) -> RemoveParsedArgs {
         }
     }
 
-    RemoveParsedArgs { force, targets }
+    RemoveArgs { force, targets }
 }
 
 /// Gets the git top-level directory for the current working directory or specified path.
@@ -163,12 +169,11 @@ pub fn is_linked_worktree(cwd: Option<&Path>, main_repo: Option<&Path>) -> bool 
     false
 }
 
-/// Removes one or more git worktrees according to the specified arguments.
-pub fn remove_worktree(
-    args: &[String],
+/// Removes one or more git worktrees according to the specified parsed arguments.
+pub fn remove_worktree_args(
+    parsed: &RemoveArgs,
     current_dir: Option<&Path>,
 ) -> Result<(), RemoveError> {
-    let parsed = parse_remove_args(args);
     let main_repo = get_current_main_repo(current_dir);
 
     let mut flags = Vec::new();
@@ -255,6 +260,20 @@ pub fn remove_worktree(
     }
 
     Ok(())
+}
+
+/// Removes one or more git worktrees according to the specified arguments.
+pub fn remove_worktree(
+    args: &[String],
+    current_dir: Option<&Path>,
+) -> Result<(), RemoveError> {
+    let parsed = parse_remove_args(args);
+    remove_worktree_args(&parsed, current_dir)
+}
+
+/// Runs the `remove` command with parsed `RemoveArgs`.
+pub fn run_args(args: &RemoveArgs) -> Result<(), RemoveError> {
+    remove_worktree_args(args, None)
 }
 
 /// Runs the `remove` command with CLI arguments.

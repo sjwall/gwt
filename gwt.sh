@@ -71,7 +71,7 @@
 #   44 - agent: --agent option requires an argument
 #   45 - agent: invalid argument count (expected exactly 1 worktree name)
 #   46 - agent: no agent configured
-unalias gwt 2>/dev/null  #omz git plugin defines `gwt` alias; remove so func wins
+unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
   local dir_name=$(basename "${main_repo:-$PWD}")

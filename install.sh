@@ -13,7 +13,7 @@ set -e
 REPO_URL="${GWT_REPO_URL:-https://github.com/sjwall/gwt.git}"
 RAW_URL="${GWT_RAW_URL:-https://raw.githubusercontent.com/sjwall/gwt/main}"
 BRANCH="${GWT_BRANCH:-main}"
-INSTALL_DIR="${GWT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gwt}"
+INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gwt"
 
 # Setup colors if running in a terminal
 if [ -t 1 ]; then
@@ -456,7 +456,7 @@ apply_skills_symlinks() {
 }
 
 # Configure skills symlinks
-SKILLS_TARGETS="${SKILLS_ARG:-$GWT_SKILLS}"
+SKILLS_TARGETS="$SKILLS_ARG"
 
 if [ -n "$SKILLS_TARGETS" ]; then
   parse_skills_selection "$SKILLS_TARGETS"

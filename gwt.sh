@@ -1,7 +1,7 @@
 #!/bin/zsh
 # git worktree helper
 #  gwt [add] [--ide IDE] [--agent[=AGENT]|-a[=AGENT]] [--no-install] NAME  create worktree ../gwt-<dir-name>/NAME, cd, yarn, launch IDE or agent
-#  gwt pull [--ide IDE] [--no-install] NAME   fetch origin/NAME, create tracking worktree, cd, yarn, launch IDE
+#  gwt pull [--ide IDE] [--no-install] NAME   fetch origin/NAME, create or recreate tracking worktree, cd, yarn, launch IDE
 #  gwt p NAME                  as above
 #  gwt cd NAME                 cd to worktree matching NAME
 #  gwt main [NAME]             cd to main repository matching NAME (defaults to main repo of current worktree, or prompts/switches from tracked repos if not in repo)
@@ -838,7 +838,12 @@ gwt() {
     mkdir -p "$dir_gwt" || return 19
     git fetch origin "$branch" || return 20
     local dest="$dir_gwt/$branch"
-    git worktree add -b "$branch" "$dest" "origin/$branch" || return 21
+    git worktree prune 2>/dev/null
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
+      git worktree add "$dest" "$branch" || return 21
+    else
+      git worktree add -b "$branch" "$dest" "origin/$branch" || return 21
+    fi
     cd "$dest" || return 22
     _gwt_init_ide "$override_ide" "$skip_install"
   }

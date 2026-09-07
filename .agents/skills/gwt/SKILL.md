@@ -61,7 +61,7 @@ gwt add -a none <branch-name>
 ```
 
 ### 2. Pull a Remote Branch into a Worktree
-Fetches `origin/<branch-name>`, creates a tracking worktree at `../gwt-<repo>/<branch-name>`, installs dependencies (unless `--no-install` is supplied), and skips IDE launch.
+Fetches `origin/<branch-name>`, creates or recreates a tracking worktree at `../gwt-<repo>/<branch-name>`, installs dependencies (unless `--no-install` is supplied), and skips IDE launch.
 
 ```bash
 gwt pull --ide none <branch-name>

@@ -78,6 +78,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `gwt track [<path>]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository).
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
 * `gwt skills [<targets>]`: Manage global agent skill symlinks (e.g. `gwt skills claude,gemini`, `gwt skills all`, `gwt skills none`, or `gwt skills list`). When run without arguments in an interactive terminal, prompts to select which agents to link (showing currently linked agents as default). Supports `-n` / `--dry-run` to preview changes.
+* `gwt migrate [-n|--dry-run]`: Check where all worktrees are located for the current repository and move any that don't match the expected path pattern (`../gwt-<dir-name>/<name>` or configured safe parent). Supports `-n` / `--dry-run` to preview changes without moving.
 * `gwt upgrade`: Upgrade the gwt repository (`git pull`, reload `gwt.sh`, and update symlinks for detected linked skills).
 
 == Configuration
@@ -90,7 +91,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 
 `gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `skills`, `upgrade`)
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `skills`, `migrate`, `upgrade`)
 * Worktree names and paths for `gwt cd`, `gwt switch`, `gwt agent`, and `gwt remove`
 * Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`
@@ -154,5 +155,9 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `45` | `agent` | Invalid argument count (expected exactly 1 worktree name).
 | `46` | `agent` | No agent configured.
 | `47` | `skills` | Skills helper script not found.
+| `48` | `migrate` | Not inside a git repository.
+| `49` | `migrate` | Unknown argument or option.
+| `50` | `migrate` | Failed to determine target worktree directory location.
+| `51` | `migrate` | `git worktree move` command failed.
 |===
 

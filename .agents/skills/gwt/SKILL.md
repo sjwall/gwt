@@ -194,7 +194,20 @@ gwt config unset <key>
 gwt config rm <key>
 ```
 
-### 10. Upgrade `gwt`
+### 10. Migrate Worktrees to Expected Path Pattern
+Checks where all worktrees are located for the current repository and moves any worktrees that don't match the expected path pattern (`../gwt-<repo>/<name>` or configured safe parent location). Supports `--dry-run` / `-n` to preview moves without moving them.
+
+```bash
+# Preview worktree moves without making changes:
+gwt migrate --dry-run
+# or shorthand:
+gwt migrate -n
+
+# Migrate worktrees:
+gwt migrate
+```
+
+### 11. Upgrade `gwt`
 Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 
 ```bash
@@ -279,3 +292,8 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `44` | `agent` | Missing required argument for `--agent` option. |
 | `45` | `agent` | Invalid argument count (expected exactly 1 worktree name). |
 | `46` | `agent` | No agent configured. |
+| `47` | `skills` | Skills helper script not found. |
+| `48` | `migrate` | Not inside a git repository. |
+| `49` | `migrate` | Unknown argument or option. |
+| `50` | `migrate` | Failed to determine target worktree directory location. |
+| `51` | `migrate` | `git worktree move` command failed. |

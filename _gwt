@@ -198,6 +198,7 @@ _gwt() {
     'config:Get or set configuration options'
     'ide:Get or set configured IDE'
     'skills:Manage agent skill symlinks'
+    'migrate:Migrate worktrees to match expected path pattern'
     'upgrade:Upgrade gwt repository'
   )
 
@@ -279,6 +280,11 @@ _gwt() {
           _arguments \
             '(-n --dry-run)'{-n,--dry-run}'[Perform a dry run without making changes]' \
             '1:targets:->skills_targets' && return 0
+          ;;
+        migrate)
+          _arguments \
+            '(-n --dry-run)'{-n,--dry-run}'[Perform a dry run without making changes]' \
+            '(-f --force -force)'{-f,--force,-force}'[Force move even if worktree is dirty or locked]' && return 0
           ;;
         upgrade)
           ;;

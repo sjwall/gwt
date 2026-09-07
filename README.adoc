@@ -161,3 +161,6 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `51` | `migrate` | `git worktree move` command failed.
 |===
 
+== License
+
+This project is licensed under the GNU General Public License v3.0 - see the link:LICENSE[LICENSE] file for details.

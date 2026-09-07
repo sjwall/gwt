@@ -23,9 +23,11 @@ During installation, you can link the `gwt` skill to your global agent environme
 * `3) claude`: Symlinks to `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`
 * `4) gemini`: Symlinks to `${ANTIGRAVITY_CONFIG_DIR:-~/.gemini/antigravity-cli}/skills` and `${GEMINI_CONFIG_DIR:-~/.gemini/config}/skills`
 * `5) all`: Symlinks to all supported environments
-* `6) none`: Skips symlinking (default when pressing Enter)
+* `6) none`: Skips symlinking (default when pressing Enter if none currently linked)
 
 You can select multiple targets by number or name (e.g. `1,3`, `claude, gemini`, or `all`).
+
+You can also inspect, change, or remove linked agent skills at any time after installation using `gwt skills` (or test changes without modifying files using `gwt skills -n`).
 
 === Installer Options & Unattended Install
 
@@ -75,7 +77,8 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
 * `gwt track [<path>]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository).
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
-* `gwt upgrade`: Upgrade the gwt repository (`git pull` and reload `gwt.sh`).
+* `gwt skills [<targets>]`: Manage global agent skill symlinks (e.g. `gwt skills claude,gemini`, `gwt skills all`, `gwt skills none`, or `gwt skills list`). When run without arguments in an interactive terminal, prompts to select which agents to link (showing currently linked agents as default). Supports `-n` / `--dry-run` to preview changes.
+* `gwt upgrade`: Upgrade the gwt repository (`git pull`, reload `gwt.sh`, and update symlinks for detected linked skills).
 
 == Configuration
 
@@ -87,7 +90,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 
 `gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `upgrade`)
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `skills`, `upgrade`)
 * Worktree names and paths for `gwt cd`, `gwt switch`, `gwt agent`, and `gwt remove`
 * Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`
@@ -150,5 +153,6 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `44` | `agent` | Missing required argument for `--agent` option.
 | `45` | `agent` | Invalid argument count (expected exactly 1 worktree name).
 | `46` | `agent` | No agent configured.
+| `47` | `skills` | Skills helper script not found.
 |===
 

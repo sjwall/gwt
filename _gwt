@@ -197,6 +197,7 @@ _gwt() {
     't:Alias for track'
     'config:Get or set configuration options'
     'ide:Get or set configured IDE'
+    'skills:Manage agent skill symlinks'
     'upgrade:Upgrade gwt repository'
   )
 
@@ -274,6 +275,11 @@ _gwt() {
             '1:repository:->repositories' \
             '*:git worktree list flags: ' && return 0
           ;;
+        skills)
+          _arguments \
+            '(-n --dry-run)'{-n,--dry-run}'[Perform a dry run without making changes]' \
+            '1:targets:->skills_targets' && return 0
+          ;;
         upgrade)
           ;;
         *)
@@ -286,6 +292,20 @@ _gwt() {
       esac
 
       case "$state" in
+        skills_targets)
+          local -a targets
+          targets=(
+            'agents:Symlink skills to ~/.agents/skills'
+            'opencode:Symlink skills to ~/.config/opencode/skills'
+            'claude:Symlink skills to ~/.claude/skills'
+            'gemini:Symlink skills to ~/.gemini/antigravity-cli/skills, ~/.gemini/config/skills'
+            'all:Symlink skills to all supported environments'
+            'none:Remove all skill symlinks'
+            'list:List status of all agent skill symlinks'
+            'sync:Sync skills for already linked agents'
+          )
+          _describe -t targets 'target' targets
+          ;;
         worktrees)
           _gwt_comp_worktrees
           ;;

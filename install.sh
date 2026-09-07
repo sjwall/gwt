@@ -167,12 +167,14 @@ elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
     info "Existing installation found at $INSTALL_DIR. Updating..."
     if command -v curl >/dev/null 2>&1; then
       curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
+      curl -fsSL "$RAW_URL/skills.sh" -o "$INSTALL_DIR/skills.sh" 2>/dev/null || true
       curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
       curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
       curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
     elif command -v wget >/dev/null 2>&1; then
       wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
+      wget -qO "$INSTALL_DIR/skills.sh" "$RAW_URL/skills.sh" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
@@ -203,6 +205,7 @@ else
       info "Downloading gwt.sh..."
       mkdir -p "$INSTALL_DIR"
       curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
+      curl -fsSL "$RAW_URL/skills.sh" -o "$INSTALL_DIR/skills.sh" 2>/dev/null || true
       curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
       curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
@@ -211,6 +214,7 @@ else
       info "Downloading gwt.sh..."
       mkdir -p "$INSTALL_DIR"
       wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
+      wget -qO "$INSTALL_DIR/skills.sh" "$RAW_URL/skills.sh" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
@@ -230,6 +234,7 @@ if [ "$DRY_RUN" -eq 0 ]; then
   fi
 
   chmod +x "$INSTALL_DIR/gwt.sh"
+  chmod +x "$INSTALL_DIR/skills.sh" 2>/dev/null || true
 fi
 
 # Configure shell profile
@@ -278,218 +283,54 @@ else
 fi
 
 # Skills management
-is_interactive() {
-  if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]; then
-    return 0
-  fi
-  if [ -t 0 ]; then
-    return 0
-  fi
-  return 1
-}
+_skills_script=""
+_cleanup_tmp_skills=0
 
-LINK_AGENTS=0
-LINK_OPENCODE=0
-LINK_CLAUDE=0
-LINK_GEMINI=0
-
-parse_skills_selection() {
-  _input="$1"
-  LINK_AGENTS=0
-  LINK_OPENCODE=0
-  LINK_CLAUDE=0
-  LINK_GEMINI=0
-
-  _cleaned="$(printf "%s" "$_input" | tr ',;' '  ' | tr '[:upper:]' '[:lower:]')"
-
-  for _token in $_cleaned; do
-    case "$_token" in
-      1|agents|agent)
-        LINK_AGENTS=1
-        ;;
-      2|opencode)
-        LINK_OPENCODE=1
-        ;;
-      3|claude)
-        LINK_CLAUDE=1
-        ;;
-      4|gemini|antigravity|agy|yourself)
-        LINK_GEMINI=1
-        ;;
-      5|all)
-        LINK_AGENTS=1
-        LINK_OPENCODE=1
-        LINK_CLAUDE=1
-        LINK_GEMINI=1
-        ;;
-      1-4)
-        LINK_AGENTS=1
-        LINK_OPENCODE=1
-        LINK_CLAUDE=1
-        LINK_GEMINI=1
-        ;;
-      0|6|none|no|n|skip)
-        LINK_AGENTS=0
-        LINK_OPENCODE=0
-        LINK_CLAUDE=0
-        LINK_GEMINI=0
-        return 0
-        ;;
-      "")
-        ;;
-      *)
-        warn "Unknown skill target: '$_token'"
-        ;;
-    esac
-  done
-}
-
-symlink_skill() {
-  _src="$1"
-  _dest_dir="$2"
-  _name="$(basename "$_src")"
-  _target="$_dest_dir/$_name"
-
-  case "$_target" in
-    "$HOME"/*)
-      _disp_target="~/${_target#"$HOME"/}"
-      ;;
-    *)
-      _disp_target="$_target"
-      ;;
-  esac
-  case "$_src" in
-    "$HOME"/*)
-      _disp_src="~/${_src#"$HOME"/}"
-      ;;
-    *)
-      _disp_src="$_src"
-      ;;
-  esac
-
-  if [ "$DRY_RUN" -eq 0 ]; then
-    mkdir -p "$_dest_dir"
-  fi
-
-  if [ -L "$_target" ]; then
-    _current="$(readlink "$_target" 2>/dev/null || true)"
-    if [ "$_current" = "$_src" ]; then
-      info "Skill '$_name' is already linked in $_disp_target"
-      return 0
-    fi
-    if [ "$DRY_RUN" -eq 1 ]; then
-      info "Would update symlink: $_disp_target -> $_disp_src"
-    else
-      rm -f "$_target"
-      ln -s "$_src" "$_target"
-      success "Updated symlink: $_disp_target -> $_disp_src"
-    fi
-  elif [ -e "$_target" ]; then
-    warn "$_disp_target exists and is not a symlink; skipping"
-  else
-    if [ "$DRY_RUN" -eq 1 ]; then
-      info "Would symlink: $_disp_target -> $_disp_src"
-    else
-      ln -s "$_src" "$_target"
-      success "Symlinked: $_disp_target -> $_disp_src"
-    fi
-  fi
-}
-
-apply_skills_symlinks() {
-  if [ "$LINK_AGENTS" -eq 0 ] && [ "$LINK_OPENCODE" -eq 0 ] && [ "$LINK_CLAUDE" -eq 0 ] && [ "$LINK_GEMINI" -eq 0 ]; then
-    return 0
-  fi
-
-  _skills_src="$INSTALL_DIR/.agents/skills"
-  if [ ! -d "$_skills_src" ] && [ -d "./.agents/skills" ]; then
-    _skills_src="$(pwd)/.agents/skills"
-  fi
-
-  if [ ! -d "$_skills_src" ] && [ "$DRY_RUN" -eq 0 ]; then
-    warn "Skills directory not found at $_skills_src; skipping skill symlinking."
-    return 0
-  fi
-
-  echo ""
-  info "Symlinking skills..."
-
-  link_all_skills() {
-    _dest_dir="$1"
-    if [ -d "$_skills_src" ]; then
-      for _skill in "$_skills_src"/*; do
-        [ -d "$_skill" ] || continue
-        symlink_skill "$_skill" "$_dest_dir"
-      done
-    elif [ "$DRY_RUN" -eq 1 ]; then
-      symlink_skill "$_skills_src/gwt" "$_dest_dir"
-    fi
-  }
-
-  if [ "$LINK_AGENTS" -eq 1 ]; then
-    _agents_dir="${AGENTS_CONFIG_DIR:-$HOME/.agents}/skills"
-    link_all_skills "$_agents_dir"
-  fi
-
-  if [ "$LINK_OPENCODE" -eq 1 ]; then
-    _opencode_dir="${OPENCODE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/skills"
-    link_all_skills "$_opencode_dir"
-  fi
-
-  if [ "$LINK_CLAUDE" -eq 1 ]; then
-    _claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
-    link_all_skills "$_claude_dir"
-  fi
-
-  if [ "$LINK_GEMINI" -eq 1 ]; then
-    if [ -n "$GEMINI_SKILLS_DIR" ]; then
-      link_all_skills "$GEMINI_SKILLS_DIR"
-    elif [ -n "$ANTIGRAVITY_SKILLS_DIR" ]; then
-      link_all_skills "$ANTIGRAVITY_SKILLS_DIR"
-    else
-      _agy_dir="${ANTIGRAVITY_CONFIG_DIR:-$HOME/.gemini/antigravity-cli}/skills"
-      _gemini_dir="${GEMINI_CONFIG_DIR:-$HOME/.gemini/config}/skills"
-      link_all_skills "$_agy_dir"
-      link_all_skills "$_gemini_dir"
-    fi
-  fi
-}
-
-# Configure skills symlinks
-SKILLS_TARGETS="$SKILLS_ARG"
-
-if [ -n "$SKILLS_TARGETS" ]; then
-  parse_skills_selection "$SKILLS_TARGETS"
-elif is_interactive; then
-  echo ""
-  info "Symlink skills to global agent directories?"
-  echo "Select targets to link skills (comma-separated or numbers):"
-  echo "  1) agents       (~/.agents/skills)"
-  echo "  2) opencode     (~/.config/opencode/skills)"
-  echo "  3) claude       (~/.claude/skills)"
-  echo "  4) gemini       (~/.gemini/antigravity-cli/skills, ~/.gemini/config/skills)"
-  echo "  5) all"
-  echo "  6) none"
-  echo ""
-  if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]; then
-    printf "Enter choice(s) [default: none]: " > /dev/tty
-    read -r SKILLS_CHOICE < /dev/tty || SKILLS_CHOICE=""
-  elif [ -t 0 ]; then
-    printf "Enter choice(s) [default: none]: "
-    read -r SKILLS_CHOICE || SKILLS_CHOICE=""
-  else
-    SKILLS_CHOICE="none"
-  fi
-  [ -z "$SKILLS_CHOICE" ] && SKILLS_CHOICE="none"
-  parse_skills_selection "$SKILLS_CHOICE"
-else
-  LINK_AGENTS=0
-  LINK_OPENCODE=0
-  LINK_CLAUDE=0
-  LINK_GEMINI=0
+if [ -f "$INSTALL_DIR/skills.sh" ]; then
+  _skills_script="$INSTALL_DIR/skills.sh"
+elif [ -f "$(dirname "$0")/skills.sh" ]; then
+  _skills_script="$(dirname "$0")/skills.sh"
+elif [ -f "./skills.sh" ]; then
+  _skills_script="./skills.sh"
 fi
 
-apply_skills_symlinks
+if [ -z "$_skills_script" ] || [ ! -f "$_skills_script" ]; then
+  _tmp_skills="$(mktemp 2>/dev/null || echo "/tmp/gwt-skills-$$.sh")"
+  if command -v curl >/dev/null 2>&1; then
+    if curl -fsSL "$RAW_URL/skills.sh" -o "$_tmp_skills" 2>/dev/null; then
+      _skills_script="$_tmp_skills"
+      _cleanup_tmp_skills=1
+    fi
+  elif command -v wget >/dev/null 2>&1; then
+    if wget -qO "$_tmp_skills" "$RAW_URL/skills.sh" 2>/dev/null; then
+      _skills_script="$_tmp_skills"
+      _cleanup_tmp_skills=1
+    fi
+  fi
+fi
+
+if [ -n "$_skills_script" ] && [ -f "$_skills_script" ]; then
+  _dry_flag=""
+  [ "$DRY_RUN" -eq 1 ] && _dry_flag="-n"
+
+  if [ -n "$SKILLS_ARG" ]; then
+    sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag "$SKILLS_ARG"
+  elif [ "$IS_UPGRADE" -eq 1 ]; then
+    if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] || [ -t 0 ]; then
+      sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag --prompt
+    else
+      sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag --sync
+    fi
+  elif [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] || [ -t 0 ]; then
+    sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag --prompt
+  else
+    sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag none
+  fi
+
+  if [ "$_cleanup_tmp_skills" -eq 1 ]; then
+    rm -f "$_tmp_skills"
+  fi
+fi
 
 echo ""
 if [ "$DRY_RUN" -eq 1 ]; then

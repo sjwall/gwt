@@ -111,3 +111,24 @@ fn verify_cli() {
     use clap::CommandFactory;
     Cli::command().debug_assert();
 }
+
+#[test]
+fn test_cli_track_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "track"]).unwrap();
+    match cli.command {
+        Commands::Track(args) => assert!(args.args.is_empty()),
+        _ => panic!("expected Track command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "track", "my_repo"]).unwrap();
+    match cli.command {
+        Commands::Track(args) => assert_eq!(args.args, vec!["my_repo"]),
+        _ => panic!("expected Track command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "track", "arg1", "arg2"]).unwrap();
+    match cli.command {
+        Commands::Track(args) => assert_eq!(args.args, vec!["arg1", "arg2"]),
+        _ => panic!("expected Track command"),
+    }
+}

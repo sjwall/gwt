@@ -221,16 +221,40 @@ pub fn pull_worktree_args<R: io::BufRead>(
 
     let dest = dir_gwt.join(&parsed.branch);
 
+    // Prune stale worktree references before adding
+    let _ = Command::new("git")
+        .arg("-C")
+        .arg(target_repo)
+        .args(["worktree", "prune"])
+        .output();
+
+    let local_branch_exists = Command::new("git")
+        .arg("-C")
+        .arg(target_repo)
+        .args([
+            "show-ref",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{}", parsed.branch),
+        ])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+
     let mut git_cmd = Command::new("git");
     git_cmd.arg("-C").arg(target_repo);
-    git_cmd.args([
-        "worktree",
-        "add",
-        "-b",
-        &parsed.branch,
-        dest.to_str().unwrap(),
-        &format!("origin/{}", parsed.branch),
-    ]);
+    if local_branch_exists {
+        git_cmd.args(["worktree", "add", dest.to_str().unwrap(), &parsed.branch]);
+    } else {
+        git_cmd.args([
+            "worktree",
+            "add",
+            "-b",
+            &parsed.branch,
+            dest.to_str().unwrap(),
+            &format!("origin/{}", parsed.branch),
+        ]);
+    }
 
     let status = git_cmd
         .status()
@@ -674,6 +698,137 @@ mod tests {
         let wt_path = temp_dir.join("gwt-myrepo").join("feat-ide");
         let marker_file = wt_path.join("created_by_pull.txt");
         assert!(marker_file.exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_pull_worktree_when_local_branch_already_exists() {
+        let temp_dir = std::env::temp_dir()
+            .join(format!("gwt_test_pull_local_exists_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let origin_dir = temp_dir.join("origin.git");
+        let repo_dir = temp_dir.join("myrepo");
+        init_git_repo_with_origin(&repo_dir, &origin_dir, "local-and-remote");
+
+        // Recreate the branch locally without checking it out
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["branch", "local-and-remote", "origin/local-and-remote"])
+            .output();
+
+        // Verify the local branch exists before pull
+        let local_exists = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["show-ref", "--verify", "--quiet", "refs/heads/local-and-remote"])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        assert!(local_exists);
+
+        let config_dir = temp_dir.join("config");
+        let result = pull_worktree(
+            &["local-and-remote".to_string(), "--ide=none".to_string()],
+            Some(&repo_dir),
+            Some(&config_dir),
+            false,
+            None::<&mut Cursor<Vec<u8>>>,
+        );
+
+        assert!(result.is_ok());
+        let dest = result.unwrap();
+        assert!(dest.is_dir());
+        assert_eq!(
+            dest.canonicalize().unwrap(),
+            temp_dir.join("gwt-myrepo").join("local-and-remote").canonicalize().unwrap()
+        );
+        assert!(dest.join("remote_file.txt").exists());
+
+        let wt_list = crate::worktree::get_worktrees_for_repo(&repo_dir).unwrap();
+        assert!(wt_list.iter().any(|wt| wt.branch.as_deref() == Some("local-and-remote")));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_pull_worktree_prunes_stale_worktrees() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_pull_prune_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let origin_dir = temp_dir.join("origin.git");
+        let repo_dir = temp_dir.join("myrepo");
+        init_git_repo_with_origin(&repo_dir, &origin_dir, "branch-1");
+
+        // Push another branch to origin
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["checkout", "-b", "branch-2"])
+            .output();
+        fs::write(repo_dir.join("file2.txt"), "branch 2").unwrap();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["add", "."])
+            .output();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["commit", "-m", "b2 commit"])
+            .output();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["push", "origin", "branch-2"])
+            .output();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["checkout", "main"])
+            .output();
+        let _ = Command::new("git")
+            .arg("-C")
+            .arg(&repo_dir)
+            .args(["branch", "-D", "branch-2"])
+            .output();
+
+        let config_dir = temp_dir.join("config");
+
+        // First pull branch-1
+        let res1 = pull_worktree(
+            &["branch-1".to_string(), "--ide=none".to_string()],
+            Some(&repo_dir),
+            Some(&config_dir),
+            false,
+            None::<&mut Cursor<Vec<u8>>>,
+        );
+        assert!(res1.is_ok());
+        let dest1 = res1.unwrap();
+        assert!(dest1.is_dir());
+
+        // Manually delete branch-1 worktree directory to simulate stale worktree
+        fs::remove_dir_all(&dest1).unwrap();
+
+        // Second pull for branch-2 should succeed and prune the stale branch-1 worktree
+        let res2 = pull_worktree(
+            &["branch-2".to_string(), "--ide=none".to_string()],
+            Some(&repo_dir),
+            Some(&config_dir),
+            false,
+            None::<&mut Cursor<Vec<u8>>>,
+        );
+        assert!(res2.is_ok());
+
+        // Verify git worktrees no longer has stale branch-1
+        let wt_list = crate::worktree::get_worktrees_for_repo(&repo_dir).unwrap();
+        assert!(!wt_list.iter().any(|wt| wt.branch.as_deref() == Some("branch-1")));
+        assert!(wt_list.iter().any(|wt| wt.branch.as_deref() == Some("branch-2")));
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

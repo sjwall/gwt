@@ -4,6 +4,7 @@ use gwt::commands::cd::CdArgs;
 use gwt::commands::config::ConfigArgs;
 use gwt::commands::ide::IdeArgs;
 use gwt::commands::list::ListArgs;
+use gwt::commands::main::{MainArgs, MainIdeArgs};
 use gwt::commands::pull::PullArgs;
 use gwt::commands::remove::RemoveArgs;
 use gwt::commands::skills::SkillsArgs;
@@ -42,6 +43,12 @@ enum Commands {
     /// Track a git repository
     #[command(alias = "t")]
     Track(TrackArgs),
+    /// Switch directory to the main repository
+    #[command(alias = "m")]
+    Main(MainArgs),
+    /// Switch directory to the main repository and launch configured IDE
+    #[command(name = "M", alias = "Main")]
+    MainIde(MainIdeArgs),
     /// View or set configuration options
     Config(ConfigArgs),
     /// Get or set configured IDE (defaults to nvim)
@@ -96,6 +103,18 @@ fn main() {
         }
         Commands::Track(args) => {
             if let Err(err) = gwt::commands::track::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Main(args) => {
+            if let Err(err) = gwt::commands::main::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::MainIde(args) => {
+            if let Err(err) = gwt::commands::main::run_ide_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
@@ -168,6 +187,60 @@ fn test_cli_skills_parsing() {
             assert!(args.sync);
         }
         _ => panic!("expected Skills command"),
+    }
+}
+
+#[test]
+fn test_cli_main_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "main"]).unwrap();
+    match cli.command {
+        Commands::Main(args) => assert!(args.args.is_empty()),
+        _ => panic!("expected Main command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "main", "my_repo"]).unwrap();
+    match cli.command {
+        Commands::Main(args) => assert_eq!(args.args, vec!["my_repo"]),
+        _ => panic!("expected Main command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "m", "my_repo"]).unwrap();
+    match cli.command {
+        Commands::Main(args) => assert_eq!(args.args, vec!["my_repo"]),
+        _ => panic!("expected Main command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "main", "arg1", "arg2"]).unwrap();
+    match cli.command {
+        Commands::Main(args) => assert_eq!(args.args, vec!["arg1", "arg2"]),
+        _ => panic!("expected Main command"),
+    }
+}
+
+#[test]
+fn test_cli_main_ide_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "M"]).unwrap();
+    match cli.command {
+        Commands::MainIde(args) => assert!(args.args.is_empty()),
+        _ => panic!("expected MainIde command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "M", "my_repo"]).unwrap();
+    match cli.command {
+        Commands::MainIde(args) => assert_eq!(args.args, vec!["my_repo"]),
+        _ => panic!("expected MainIde command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "Main", "my_repo"]).unwrap();
+    match cli.command {
+        Commands::MainIde(args) => assert_eq!(args.args, vec!["my_repo"]),
+        _ => panic!("expected MainIde command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "M", "--ide", "code", "my_repo"]).unwrap();
+    match cli.command {
+        Commands::MainIde(args) => assert_eq!(args.args, vec!["--ide", "code", "my_repo"]),
+        _ => panic!("expected MainIde command"),
     }
 }
 

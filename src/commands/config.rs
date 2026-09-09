@@ -4,6 +4,7 @@ use std::io;
 use std::path::Path;
 
 use crate::config::{get_config_file, get_key_value, set_key_value, unset_key_value};
+use crate::ide::get_configured_ide;
 
 /// Error types that can occur during the `config` command.
 #[derive(Debug)]
@@ -69,9 +70,11 @@ impl From<io::Error> for ConfigError {
 }
 
 /// Lists all configuration lines from the config file.
+/// If `ide` is not explicitly configured, appends `ide=nvim (default)`.
 pub fn list_config_lines(config_dir: Option<&Path>) -> Result<Vec<String>, ConfigError> {
     let config_file = get_config_file(config_dir);
     let mut lines = Vec::new();
+    let mut has_ide = false;
 
     if let Some(ref file_path) = config_file {
         if file_path.exists() {
@@ -81,20 +84,35 @@ pub fn list_config_lines(config_dir: Option<&Path>) -> Result<Vec<String>, Confi
                 if trimmed.is_empty() || trimmed.starts_with('#') {
                     continue;
                 }
+                if let Some((k, _)) = trimmed.split_once('=') {
+                    if k.trim() == "ide" {
+                        has_ide = true;
+                    }
+                }
                 lines.push(trimmed.to_string());
             }
         }
+    }
+
+    if !has_ide {
+        lines.push("ide=nvim (default)".to_string());
     }
 
     Ok(lines)
 }
 
 /// Gets the value of a specific configuration key.
+///
+/// Provides virtual fallback resolution for `ide` (config -> GWT_IDE -> "nvim")
 pub fn get_config(
     key: &str,
     config_dir: Option<&Path>,
     not_found_err: impl FnOnce(String) -> ConfigError,
 ) -> Result<String, ConfigError> {
+    if key == "ide" {
+        return Ok(get_configured_ide(config_dir));
+    }
+
     let config_file = get_config_file(config_dir).ok_or(ConfigError::ConfigDirNotFound)?;
     let val = get_key_value(&config_file, key)?;
     match val {
@@ -210,7 +228,7 @@ mod tests {
         fs::create_dir_all(&temp_dir).unwrap();
 
         let lines = list_config_lines(Some(&temp_dir)).unwrap();
-        assert!(lines.is_empty());
+        assert_eq!(lines, vec!["ide=nvim (default)".to_string()]);
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
@@ -228,7 +246,15 @@ mod tests {
         let lines = list_config_lines(Some(&temp_dir)).unwrap();
         assert_eq!(
             lines,
-            vec!["key1=val1".to_string(), "key2=val2".to_string()]
+            vec![
+                "key1=val1".to_string(),
+                "key2=val2".to_string(),
+                "ide=nvim (default)".to_string()
+            ]
+        );
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
         );
 
         let _ = fs::remove_dir_all(&temp_dir);

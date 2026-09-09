@@ -1140,8 +1140,8 @@ gwt() {
       if [[ -f "$gwt_dir/gwt.sh" ]]; then
         source "$gwt_dir/gwt.sh"
       fi
-      if [[ -f "$gwt_dir/skills.sh" ]]; then
-        sh "$gwt_dir/skills.sh" --dir="$gwt_dir" --sync
+      if command -v gwt >/dev/null 2>&1; then
+        command gwt skills --dir="$gwt_dir" --sync
       fi
       return 0
     else
@@ -1151,19 +1151,23 @@ gwt() {
 
   _gwt_skills() {
     local gwt_dir="${GWT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gwt}"
-    if [[ ! -d "$gwt_dir" || ! -f "$gwt_dir/skills.sh" ]]; then
-      local script_dir="${${(%):-%x}:A:h}"
-      if [[ -f "$script_dir/skills.sh" ]]; then
-        gwt_dir="$script_dir"
-      fi
+    local gwt_bin=""
+    if command -v gwt >/dev/null 2>&1; then
+      gwt_bin="command gwt"
+    elif [[ -x "$gwt_dir/gwt" ]]; then
+      gwt_bin="$gwt_dir/gwt"
+    elif [[ -x "$gwt_dir/target/release/gwt" ]]; then
+      gwt_bin="$gwt_dir/target/release/gwt"
+    elif [[ -x "$gwt_dir/target/debug/gwt" ]]; then
+      gwt_bin="$gwt_dir/target/debug/gwt"
     fi
 
-    if [[ ! -f "$gwt_dir/skills.sh" ]]; then
-      echo "gwt: skills helper not found at $gwt_dir/skills.sh" >&2
+    if [[ -n "$gwt_bin" ]]; then
+      ${=gwt_bin} skills --dir="$gwt_dir" "$@"
+    else
+      echo "gwt: gwt command not found" >&2
       return 47
     fi
-
-    sh "$gwt_dir/skills.sh" --dir="$gwt_dir" "$@"
   }
 
   _gwt_track() {

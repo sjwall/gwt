@@ -167,14 +167,12 @@ elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
     info "Existing installation found at $INSTALL_DIR. Updating..."
     if command -v curl >/dev/null 2>&1; then
       curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
-      curl -fsSL "$RAW_URL/skills.sh" -o "$INSTALL_DIR/skills.sh" 2>/dev/null || true
       curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
       curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
       curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
     elif command -v wget >/dev/null 2>&1; then
       wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
-      wget -qO "$INSTALL_DIR/skills.sh" "$RAW_URL/skills.sh" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
@@ -205,7 +203,6 @@ else
       info "Downloading gwt.sh..."
       mkdir -p "$INSTALL_DIR"
       curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
-      curl -fsSL "$RAW_URL/skills.sh" -o "$INSTALL_DIR/skills.sh" 2>/dev/null || true
       curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
       curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
@@ -214,7 +211,6 @@ else
       info "Downloading gwt.sh..."
       mkdir -p "$INSTALL_DIR"
       wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
-      wget -qO "$INSTALL_DIR/skills.sh" "$RAW_URL/skills.sh" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
       wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
       mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
@@ -234,7 +230,6 @@ if [ "$DRY_RUN" -eq 0 ]; then
   fi
 
   chmod +x "$INSTALL_DIR/gwt.sh"
-  chmod +x "$INSTALL_DIR/skills.sh" 2>/dev/null || true
 fi
 
 # Configure shell profile
@@ -283,52 +278,29 @@ else
 fi
 
 # Skills management
-_skills_script=""
-_cleanup_tmp_skills=0
+_dry_flag=""
+[ "$DRY_RUN" -eq 1 ] && _dry_flag="-n"
 
-if [ -f "$INSTALL_DIR/skills.sh" ]; then
-  _skills_script="$INSTALL_DIR/skills.sh"
-elif [ -f "$(dirname "$0")/skills.sh" ]; then
-  _skills_script="$(dirname "$0")/skills.sh"
-elif [ -f "./skills.sh" ]; then
-  _skills_script="./skills.sh"
+_gwt_cmd=""
+if command -v gwt >/dev/null 2>&1; then
+  _gwt_cmd="gwt"
+elif [ -x "$INSTALL_DIR/gwt" ]; then
+  _gwt_cmd="$INSTALL_DIR/gwt"
 fi
 
-if [ -z "$_skills_script" ] || [ ! -f "$_skills_script" ]; then
-  _tmp_skills="$(mktemp 2>/dev/null || echo "/tmp/gwt-skills-$$.sh")"
-  if command -v curl >/dev/null 2>&1; then
-    if curl -fsSL "$RAW_URL/skills.sh" -o "$_tmp_skills" 2>/dev/null; then
-      _skills_script="$_tmp_skills"
-      _cleanup_tmp_skills=1
-    fi
-  elif command -v wget >/dev/null 2>&1; then
-    if wget -qO "$_tmp_skills" "$RAW_URL/skills.sh" 2>/dev/null; then
-      _skills_script="$_tmp_skills"
-      _cleanup_tmp_skills=1
-    fi
-  fi
-fi
-
-if [ -n "$_skills_script" ] && [ -f "$_skills_script" ]; then
-  _dry_flag=""
-  [ "$DRY_RUN" -eq 1 ] && _dry_flag="-n"
-
+if [ -n "$_gwt_cmd" ]; then
   if [ -n "$SKILLS_ARG" ]; then
-    sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag "$SKILLS_ARG"
+    $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag "$SKILLS_ARG"
   elif [ "$IS_UPGRADE" -eq 1 ]; then
     if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] || [ -t 0 ]; then
-      sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag --prompt
+      $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag --prompt
     else
-      sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag --sync
+      $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag --sync
     fi
   elif [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] || [ -t 0 ]; then
-    sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag --prompt
+    $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag --prompt
   else
-    sh "$_skills_script" --dir="$INSTALL_DIR" $_dry_flag none
-  fi
-
-  if [ "$_cleanup_tmp_skills" -eq 1 ]; then
-    rm -f "$_tmp_skills"
+    $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag none
   fi
 fi
 

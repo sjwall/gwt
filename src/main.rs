@@ -6,6 +6,7 @@ use gwt::commands::ide::IdeArgs;
 use gwt::commands::list::ListArgs;
 use gwt::commands::pull::PullArgs;
 use gwt::commands::remove::RemoveArgs;
+use gwt::commands::skills::SkillsArgs;
 use gwt::commands::switch::SwitchArgs;
 use gwt::commands::track::TrackArgs;
 
@@ -36,6 +37,8 @@ enum Commands {
     /// Remove a worktree
     #[command(alias = "rm")]
     Remove(RemoveArgs),
+    /// Manage global agent skill symlinks
+    Skills(SkillsArgs),
     /// Track a git repository
     #[command(alias = "t")]
     Track(TrackArgs),
@@ -81,6 +84,12 @@ fn main() {
         }
         Commands::Remove(args) => {
             if let Err(err) = gwt::commands::remove::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Skills(args) => {
+            if let Err(err) = gwt::commands::skills::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
@@ -132,3 +141,33 @@ fn test_cli_track_parsing() {
         _ => panic!("expected Track command"),
     }
 }
+
+#[test]
+fn test_cli_skills_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "skills"]).unwrap();
+    match cli.command {
+        Commands::Skills(args) => {
+            assert!(args.targets.is_empty());
+            assert!(!args.dry_run);
+        }
+        _ => panic!("expected Skills command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "skills", "claude,gemini", "-n"]).unwrap();
+    match cli.command {
+        Commands::Skills(args) => {
+            assert_eq!(args.targets, vec!["claude,gemini"]);
+            assert!(args.dry_run);
+        }
+        _ => panic!("expected Skills command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "skills", "--sync"]).unwrap();
+    match cli.command {
+        Commands::Skills(args) => {
+            assert!(args.sync);
+        }
+        _ => panic!("expected Skills command"),
+    }
+}
+

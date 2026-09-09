@@ -5,7 +5,6 @@ A lightweight CLI tool to simplify creating, switching, and managing Git worktre
 ## Codebase Overview
 
 - **`./gwt.sh`**: Main implementation file containing the `gwt` Zsh function and embedded Zsh autocompletion logic.
-- **`./skills.sh`**: Shared agent skills manager for detection, symlinking, unlinking, and interactive selection.
 - **`./_gwt`**: Standalone Zsh autocompletion file (`#compdef gwt`) for autoloading and plugin managers.
 - **`./install.sh`**: POSIX shell installation and upgrade script.
 - **`./README.adoc`**: Project documentation, command reference, configuration paths, and exit codes.

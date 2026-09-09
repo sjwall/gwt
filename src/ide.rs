@@ -40,7 +40,7 @@ pub fn set_configured_ide(ide: &str, config_dir: Option<&Path>) -> io::Result<()
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 "Could not determine config directory",
-            ))
+            ));
         }
     };
     set_key_value(&config_file, "ide", ide)
@@ -48,7 +48,10 @@ pub fn set_configured_ide(ide: &str, config_dir: Option<&Path>) -> io::Result<()
 
 /// Resolves the effective IDE command to use given an optional CLI override (`--ide`).
 /// Returns `None` if the effective IDE is `"none"`, or `Some(command)` otherwise.
-pub fn resolve_ide_command(override_ide: Option<&str>, config_dir: Option<&Path>) -> Option<String> {
+pub fn resolve_ide_command(
+    override_ide: Option<&str>,
+    config_dir: Option<&Path>,
+) -> Option<String> {
     let ide = override_ide
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
@@ -138,9 +141,9 @@ mod tests {
         let ide = get_configured_ide(Some(&temp_dir));
         assert_eq!(ide, "code");
 
-        set_configured_ide("cursor", Some(&temp_dir)).unwrap();
+        set_configured_ide("helloWorld", Some(&temp_dir)).unwrap();
         let updated_ide = get_configured_ide(Some(&temp_dir));
-        assert_eq!(updated_ide, "cursor");
+        assert_eq!(updated_ide, "helloWorld");
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
@@ -156,8 +159,14 @@ mod tests {
         let orig = std::env::var("GWT_IDE").ok();
         unsafe { std::env::remove_var("GWT_IDE") };
 
-        assert_eq!(resolve_ide_command(None, Some(&temp_dir)), Some("nvim".to_string()));
-        assert_eq!(resolve_ide_command(Some("code"), Some(&temp_dir)), Some("code".to_string()));
+        assert_eq!(
+            resolve_ide_command(None, Some(&temp_dir)),
+            Some("nvim".to_string())
+        );
+        assert_eq!(
+            resolve_ide_command(Some("code"), Some(&temp_dir)),
+            Some("code".to_string())
+        );
         assert_eq!(resolve_ide_command(Some("none"), Some(&temp_dir)), None);
         assert_eq!(resolve_ide_command(Some("NONE"), Some(&temp_dir)), None);
 
@@ -165,7 +174,10 @@ mod tests {
         set_configured_ide("none", Some(&temp_dir)).unwrap();
         assert_eq!(resolve_ide_command(None, Some(&temp_dir)), None);
         // Override takes precedence over config
-        assert_eq!(resolve_ide_command(Some("zed"), Some(&temp_dir)), Some("zed".to_string()));
+        assert_eq!(
+            resolve_ide_command(Some("zed"), Some(&temp_dir)),
+            Some("zed".to_string())
+        );
 
         if let Some(v) = orig {
             unsafe { std::env::set_var("GWT_IDE", v) };

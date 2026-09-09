@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
+use crate::agent::get_configured_agent;
 use crate::config::{get_config_file, get_key_value, set_key_value, unset_key_value};
 use crate::ide::get_configured_ide;
 
@@ -104,6 +105,7 @@ pub fn list_config_lines(config_dir: Option<&Path>) -> Result<Vec<String>, Confi
 /// Gets the value of a specific configuration key.
 ///
 /// Provides virtual fallback resolution for `ide` (config -> GWT_IDE -> "nvim")
+/// and `agent` (config -> GWT_AGENT).
 pub fn get_config(
     key: &str,
     config_dir: Option<&Path>,
@@ -111,6 +113,13 @@ pub fn get_config(
 ) -> Result<String, ConfigError> {
     if key == "ide" {
         return Ok(get_configured_ide(config_dir));
+    }
+
+    if key == "agent" {
+        if let Some(agent) = get_configured_agent(config_dir) {
+            return Ok(agent);
+        }
+        return Err(not_found_err(key.to_string()));
     }
 
     let config_file = get_config_file(config_dir).ok_or(ConfigError::ConfigDirNotFound)?;
@@ -255,6 +264,21 @@ mod tests {
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_list_config_with_ide_configured() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_cfg_list_ide_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let config_file = temp_dir.join("config");
+        fs::write(&config_file, "# Comment\nide=cursor\nkey2=val2\n").unwrap();
+
+        let lines = list_config_lines(Some(&temp_dir)).unwrap();
+        assert_eq!(
+            lines,
+            vec!["ide=cursor".to_string(), "key2=val2".to_string()]
         );
 
         let _ = fs::remove_dir_all(&temp_dir);
@@ -443,6 +467,159 @@ mod tests {
         assert_eq!(err.exit_code(), 33);
         assert_eq!(err.to_string(), "config key 'nonexistent' not found");
 
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_execute_config_get_ide_virtual_fallback() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_cfg_get_ide_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let orig = std::env::var("GWT_IDE").ok();
+        unsafe { std::env::remove_var("GWT_IDE") };
+
+        // Default fallback to "nvim"
+        let out = execute_config(&["get".to_string(), "ide".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out, vec!["nvim".to_string()]);
+
+        // Env var override
+        unsafe { std::env::set_var("GWT_IDE", "vim") };
+        let out_env = execute_config(&["get".to_string(), "ide".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_env, vec!["vim".to_string()]);
+
+        // Config file takes precedence over env var
+        let config_file = temp_dir.join("config");
+        fs::write(&config_file, "ide=cursor\n").unwrap();
+        let out_file = execute_config(&["get".to_string(), "ide".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_file, vec!["cursor".to_string()]);
+
+        match orig {
+            Some(v) => unsafe { std::env::set_var("GWT_IDE", v) },
+            None => unsafe { std::env::remove_var("GWT_IDE") },
+        }
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_execute_config_get_agent_virtual_fallback() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_cfg_get_agent_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let orig = std::env::var("GWT_AGENT").ok();
+        unsafe { std::env::remove_var("GWT_AGENT") };
+
+        // Unset agent -> exit code 30
+        let err = execute_config(&["get".to_string(), "agent".to_string()], Some(&temp_dir)).unwrap_err();
+        assert_eq!(err.exit_code(), 30);
+        assert_eq!(err.to_string(), "config key 'agent' not found");
+
+        // Env var fallback
+        unsafe { std::env::set_var("GWT_AGENT", "gemini-cli") };
+        let out_env = execute_config(&["get".to_string(), "agent".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_env, vec!["gemini-cli".to_string()]);
+
+        // Config file takes precedence
+        let config_file = temp_dir.join("config");
+        fs::write(&config_file, "agent=claude\n").unwrap();
+        let out_file = execute_config(&["get".to_string(), "agent".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_file, vec!["claude".to_string()]);
+
+        match orig {
+            Some(v) => unsafe { std::env::set_var("GWT_AGENT", v) },
+            None => unsafe { std::env::remove_var("GWT_AGENT") },
+        }
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_execute_config_shorthand_virtual_keys() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_cfg_short_virt_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let orig_ide = std::env::var("GWT_IDE").ok();
+        let orig_agent = std::env::var("GWT_AGENT").ok();
+        unsafe {
+            std::env::remove_var("GWT_IDE");
+            std::env::remove_var("GWT_AGENT");
+        }
+
+        // gwt config ide -> "nvim"
+        let out_ide = execute_config(&["ide".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_ide, vec!["nvim".to_string()]);
+
+        // gwt config agent -> exit code 33 when unset
+        let err_agent = execute_config(&["agent".to_string()], Some(&temp_dir)).unwrap_err();
+        assert_eq!(err_agent.exit_code(), 33);
+        assert_eq!(err_agent.to_string(), "config key 'agent' not found");
+
+        // With env var
+        unsafe { std::env::set_var("GWT_AGENT", "opencode") };
+        let out_agent_env = execute_config(&["agent".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_agent_env, vec!["opencode".to_string()]);
+
+        // With config file
+        let config_file = temp_dir.join("config");
+        fs::write(&config_file, "agent=custom-agent\n").unwrap();
+        let out_agent_cfg = execute_config(&["agent".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_agent_cfg, vec!["custom-agent".to_string()]);
+
+        if let Some(v) = orig_ide {
+            unsafe { std::env::set_var("GWT_IDE", v) };
+        }
+        match orig_agent {
+            Some(v) => unsafe { std::env::set_var("GWT_AGENT", v) },
+            None => unsafe { std::env::remove_var("GWT_AGENT") },
+        }
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_set_and_unset_ide_and_agent() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_cfg_set_unset_virt_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let orig_ide = std::env::var("GWT_IDE").ok();
+        let orig_agent = std::env::var("GWT_AGENT").ok();
+        unsafe {
+            std::env::remove_var("GWT_IDE");
+            std::env::remove_var("GWT_AGENT");
+        }
+
+        // Set ide
+        let out_set_ide = execute_config(&["set".to_string(), "ide".to_string(), "code".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_set_ide, vec!["gwt: set ide to code".to_string()]);
+        assert_eq!(execute_config(&["get".to_string(), "ide".to_string()], Some(&temp_dir)).unwrap(), vec!["code".to_string()]);
+
+        // Unset ide -> falls back to "nvim"
+        let out_unset_ide = execute_config(&["unset".to_string(), "ide".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_unset_ide, vec!["gwt: unset ide".to_string()]);
+        assert_eq!(execute_config(&["get".to_string(), "ide".to_string()], Some(&temp_dir)).unwrap(), vec!["nvim".to_string()]);
+
+        // Set agent
+        let out_set_agent = execute_config(&["set".to_string(), "agent".to_string(), "claude".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_set_agent, vec!["gwt: set agent to claude".to_string()]);
+        assert_eq!(execute_config(&["get".to_string(), "agent".to_string()], Some(&temp_dir)).unwrap(), vec!["claude".to_string()]);
+
+        // Unset agent -> exit code 30
+        let out_unset_agent = execute_config(&["unset".to_string(), "agent".to_string()], Some(&temp_dir)).unwrap();
+        assert_eq!(out_unset_agent, vec!["gwt: unset agent".to_string()]);
+        let err = execute_config(&["get".to_string(), "agent".to_string()], Some(&temp_dir)).unwrap_err();
+        assert_eq!(err.exit_code(), 30);
+
+        if let Some(v) = orig_ide {
+            unsafe { std::env::set_var("GWT_IDE", v) };
+        }
+        if let Some(v) = orig_agent {
+            unsafe { std::env::set_var("GWT_AGENT", v) };
+        }
         let _ = fs::remove_dir_all(&temp_dir);
     }
 

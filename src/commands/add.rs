@@ -22,6 +22,8 @@ pub enum AddError {
     GitWorktreeAdd(String),
     /// Failed to change directory to newly created worktree (exit code 28).
     CdWorktree(String),
+    /// Error configuring or launching agent (exit code 46, etc.).
+    Agent(crate::agent::AgentError),
     /// An I/O error occurred (exit code 1).
     Io(io::Error),
 }
@@ -36,6 +38,7 @@ impl AddError {
             AddError::CreateParentDir(_) => 26,
             AddError::GitWorktreeAdd(_) => 27,
             AddError::CdWorktree(_) => 28,
+            AddError::Agent(err) => err.exit_code(),
             AddError::Io(_) => 1,
         }
     }
@@ -76,6 +79,7 @@ impl fmt::Display for AddError {
                     write!(f, "failed to change directory to newly created worktree: {msg}")
                 }
             }
+            AddError::Agent(err) => write!(f, "{err}"),
             AddError::Io(err) => write!(f, "{err}"),
         }
     }
@@ -84,9 +88,16 @@ impl fmt::Display for AddError {
 impl std::error::Error for AddError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            AddError::Agent(err) => Some(err),
             AddError::Io(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<crate::agent::AgentError> for AddError {
+    fn from(err: crate::agent::AgentError) -> Self {
+        AddError::Agent(err)
     }
 }
 
@@ -97,62 +108,113 @@ impl From<io::Error> for AddError {
 }
 
 /// CLI arguments for the `add` command parsed by `clap`.
-#[derive(clap::Args, Debug, Clone, PartialEq, Eq)]
+#[derive(clap::Args, Debug, Clone, PartialEq, Eq, Default)]
 pub struct AddArgs {
-    /// Override configured IDE (e.g. nvim, code, cursor, none)
-    #[arg(long)]
-    pub ide: Option<String>,
-
-    /// Skip running yarn install
-    #[arg(long)]
-    pub no_install: bool,
-
-    /// Branch name for the new worktree
-    pub branch: String,
+    /// Arguments for add command
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub args: Vec<String>,
 }
 
-pub type AddParsedArgs = AddArgs;
+impl AddArgs {
+    /// Creates a new `AddArgs` with raw arguments.
+    pub fn new(args: Vec<String>) -> Self {
+        Self { args }
+    }
+}
 
-/// Parses CLI arguments for the `add` command, supporting `--ide <IDE>`, `--ide=<IDE>`, and `--no-install`.
-pub fn parse_add_args(args: &[String]) -> Result<AddArgs, AddError> {
+/// Parsed options and arguments for the `add` command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddParsedArgs {
+    /// Branch name for the new worktree
+    pub branch: String,
+    /// Override configured IDE (e.g. nvim, code, cursor, none)
+    pub ide: Option<String>,
+    /// Override configured agent (e.g. claude, opencode, none)
+    pub agent: Option<String>,
+    /// Whether agent launch was requested via `--agent` or `-a`
+    pub use_agent: bool,
+    /// Skip running yarn install
+    pub no_install: bool,
+}
+
+/// Parses CLI arguments for the `add` command, supporting `--ide <IDE>`, `--ide=<IDE>`,
+/// `--no-install`, and `--agent` / `-a` (with optional agent name).
+pub fn parse_add_args(args: &[String]) -> Result<AddParsedArgs, AddError> {
     let mut override_ide = None;
-    let mut no_install = false;
-    let mut positional = Vec::new();
+    let mut override_agent = None;
+    let mut use_agent = false;
+    let mut skip_install = false;
+    let mut agent_opt_idx: Option<usize> = None;
+    let mut non_opts: Vec<String> = Vec::new();
+    let mut non_opt_indices: Vec<usize> = Vec::new();
     let mut i = 0;
 
     while i < args.len() {
         let arg = &args[i];
-        if arg == "--ide" {
+        if let Some(val) = arg.strip_prefix("--ide=") {
+            override_ide = Some(val.to_string());
+            i += 1;
+        } else if arg == "--ide" {
             if i + 1 >= args.len() {
                 return Err(AddError::MissingIdeArg);
             }
             override_ide = Some(args[i + 1].clone());
             i += 2;
-        } else if let Some(val) = arg.strip_prefix("--ide=") {
-            override_ide = Some(val.to_string());
-            i += 1;
         } else if arg == "--no-install" {
-            no_install = true;
+            skip_install = true;
+            i += 1;
+        } else if let Some(val) = arg.strip_prefix("--agent=") {
+            use_agent = true;
+            override_agent = Some(val.to_string());
+            i += 1;
+        } else if let Some(val) = arg.strip_prefix("-a=") {
+            use_agent = true;
+            override_agent = Some(val.to_string());
+            i += 1;
+        } else if arg == "--agent" || arg == "-a" {
+            use_agent = true;
+            agent_opt_idx = Some(i);
             i += 1;
         } else {
-            positional.push(arg.clone());
+            non_opts.push(arg.clone());
+            non_opt_indices.push(i);
             i += 1;
         }
     }
 
-    if positional.len() != 1 {
-        return Err(AddError::InvalidArgCount(positional.join(" ")));
-    }
+    let branch = if let Some(agent_idx) = agent_opt_idx {
+        if non_opts.len() == 1 {
+            non_opts[0].clone()
+        } else if non_opts.len() == 2 {
+            if non_opt_indices[0] == agent_idx + 1 {
+                override_agent = Some(non_opts[0].clone());
+                non_opts[1].clone()
+            } else if non_opt_indices[1] == agent_idx + 1 {
+                override_agent = Some(non_opts[1].clone());
+                non_opts[0].clone()
+            } else {
+                return Err(AddError::InvalidArgCount(non_opts.join(" ")));
+            }
+        } else {
+            return Err(AddError::InvalidArgCount(non_opts.join(" ")));
+        }
+    } else if non_opts.len() == 1 {
+        non_opts[0].clone()
+    } else {
+        return Err(AddError::InvalidArgCount(non_opts.join(" ")));
+    };
 
-    let branch = positional[0].trim().to_string();
+    let branch = branch.trim().to_string();
     if branch.is_empty() {
         return Err(AddError::InvalidArgCount(String::new()));
     }
 
-    Ok(AddArgs {
+    Ok(AddParsedArgs {
         branch,
         ide: override_ide,
-        no_install,
+        agent: override_agent,
+        use_agent,
+        no_install: skip_install,
     })
 }
 
@@ -167,13 +229,13 @@ pub fn get_dir_gwt<R: io::BufRead>(
 }
 
 /// Creates a new worktree for the specified branch name, running `yarn` if `yarn.lock` exists,
-/// and launching the configured IDE unless disabled.
+/// and launching the configured IDE or agent unless disabled.
 pub fn add_worktree_args<R: io::BufRead>(
-    parsed: &AddArgs,
+    parsed: &AddParsedArgs,
     current_dir: Option<&Path>,
     config_dir: Option<&Path>,
     launch: bool,
-    prompt_reader: Option<&mut R>,
+    mut prompt_reader: Option<&mut R>,
 ) -> Result<PathBuf, AddError> {
     let main_repo = get_current_main_repo(current_dir);
     if let Some(ref main) = main_repo {
@@ -192,7 +254,7 @@ pub fn add_worktree_args<R: io::BufRead>(
         },
     };
 
-    let dir_gwt = get_dir_gwt(target_repo, config_dir, prompt_reader)?;
+    let dir_gwt = get_dir_gwt(target_repo, config_dir, prompt_reader.as_deref_mut())?;
 
     if let Err(err) = std::fs::create_dir_all(&dir_gwt) {
         return Err(AddError::CreateParentDir(err.to_string()));
@@ -220,14 +282,23 @@ pub fn add_worktree_args<R: io::BufRead>(
     }
 
     if launch {
-        launch_ide(parsed.ide.as_deref(), &dest, config_dir)?;
+        if parsed.use_agent {
+            crate::agent::launch_agent_with_reader(
+                parsed.agent.as_deref(),
+                &dest,
+                config_dir,
+                prompt_reader.as_deref_mut(),
+            )?;
+        } else {
+            launch_ide(parsed.ide.as_deref(), &dest, config_dir)?;
+        }
     }
 
     Ok(dest)
 }
 
 /// Creates a new worktree for the specified branch name, running `yarn` if `yarn.lock` exists,
-/// and launching the configured IDE unless disabled.
+/// and launching the configured IDE or agent unless disabled.
 pub fn add_worktree<R: io::BufRead>(
     args: &[String],
     current_dir: Option<&Path>,
@@ -241,7 +312,7 @@ pub fn add_worktree<R: io::BufRead>(
 
 /// Runs the `add` command with parsed `AddArgs`.
 pub fn run_args(args: &AddArgs) -> Result<PathBuf, AddError> {
-    add_worktree_args(args, None, None, true, None::<&mut io::Empty>)
+    add_worktree(&args.args, None, None, true, None::<&mut io::Empty>)
 }
 
 /// Runs the `add` command with CLI arguments.
@@ -293,9 +364,11 @@ mod tests {
         let p1 = parse_add_args(&["my-branch".into()]).unwrap();
         assert_eq!(
             p1,
-            AddArgs {
+            AddParsedArgs {
                 branch: "my-branch".into(),
                 ide: None,
+                agent: None,
+                use_agent: false,
                 no_install: false,
             }
         );
@@ -303,9 +376,11 @@ mod tests {
         let p2 = parse_add_args(&["--ide".into(), "code".into(), "feat-x".into()]).unwrap();
         assert_eq!(
             p2,
-            AddArgs {
+            AddParsedArgs {
                 branch: "feat-x".into(),
                 ide: Some("code".into()),
+                agent: None,
+                use_agent: false,
                 no_install: false,
             }
         );
@@ -313,9 +388,11 @@ mod tests {
         let p3 = parse_add_args(&["--ide=cursor".into(), "--no-install".into(), "feat-y".into()]).unwrap();
         assert_eq!(
             p3,
-            AddArgs {
+            AddParsedArgs {
                 branch: "feat-y".into(),
                 ide: Some("cursor".into()),
+                agent: None,
+                use_agent: false,
                 no_install: true,
             }
         );
@@ -323,10 +400,97 @@ mod tests {
         let p4 = parse_add_args(&["feat-z".into(), "--no-install".into(), "--ide".into(), "none".into()]).unwrap();
         assert_eq!(
             p4,
-            AddArgs {
+            AddParsedArgs {
                 branch: "feat-z".into(),
                 ide: Some("none".into()),
+                agent: None,
+                use_agent: false,
                 no_install: true,
+            }
+        );
+
+        // Agent options
+        let p5 = parse_add_args(&["--agent".into(), "feat-a1".into()]).unwrap();
+        assert_eq!(
+            p5,
+            AddParsedArgs {
+                branch: "feat-a1".into(),
+                ide: None,
+                agent: None,
+                use_agent: true,
+                no_install: false,
+            }
+        );
+
+        let p6 = parse_add_args(&["-a".into(), "feat-a2".into()]).unwrap();
+        assert_eq!(
+            p6,
+            AddParsedArgs {
+                branch: "feat-a2".into(),
+                ide: None,
+                agent: None,
+                use_agent: true,
+                no_install: false,
+            }
+        );
+
+        let p7 = parse_add_args(&["--agent=opencode".into(), "feat-a3".into()]).unwrap();
+        assert_eq!(
+            p7,
+            AddParsedArgs {
+                branch: "feat-a3".into(),
+                ide: None,
+                agent: Some("opencode".into()),
+                use_agent: true,
+                no_install: false,
+            }
+        );
+
+        let p8 = parse_add_args(&["-a=claude".into(), "feat-a4".into()]).unwrap();
+        assert_eq!(
+            p8,
+            AddParsedArgs {
+                branch: "feat-a4".into(),
+                ide: None,
+                agent: Some("claude".into()),
+                use_agent: true,
+                no_install: false,
+            }
+        );
+
+        let p9 = parse_add_args(&["--agent".into(), "opencode".into(), "feat-a5".into()]).unwrap();
+        assert_eq!(
+            p9,
+            AddParsedArgs {
+                branch: "feat-a5".into(),
+                ide: None,
+                agent: Some("opencode".into()),
+                use_agent: true,
+                no_install: false,
+            }
+        );
+
+        let p10 = parse_add_args(&["feat-a6".into(), "-a".into(), "none".into()]).unwrap();
+        assert_eq!(
+            p10,
+            AddParsedArgs {
+                branch: "feat-a6".into(),
+                ide: None,
+                agent: Some("none".into()),
+                use_agent: true,
+                no_install: false,
+            }
+        );
+
+        let p11 = parse_add_args(&["feat-a7".into(), "--agent".into()]).unwrap();
+        assert_eq!(
+            p11,
+            AddParsedArgs {
+                branch: "feat-a7".into(),
+                ide: None,
+                agent: None,
+                use_agent: true,
+                no_install: false,
             }
         );
     }
@@ -344,6 +508,17 @@ mod tests {
         let err_multi = parse_add_args(&["feat1".into(), "feat2".into()]).unwrap_err();
         assert_eq!(err_multi.exit_code(), 24);
         assert_eq!(err_multi.to_string(), "unknown command: 'feat1 feat2'");
+
+        let err_agent_empty = parse_add_args(&["--agent".into()]).unwrap_err();
+        assert_eq!(err_agent_empty.exit_code(), 24);
+        assert_eq!(err_agent_empty.to_string(), "unknown command: ''");
+
+        let err_a_empty = parse_add_args(&["-a".into()]).unwrap_err();
+        assert_eq!(err_a_empty.exit_code(), 24);
+        assert_eq!(err_a_empty.to_string(), "unknown command: ''");
+
+        let err_agent_multi = parse_add_args(&["--agent".into(), "a1".into(), "b1".into(), "c1".into()]).unwrap_err();
+        assert_eq!(err_agent_multi.exit_code(), 24);
 
         let err_missing_ide = parse_add_args(&["--ide".into()]).unwrap_err();
         assert_eq!(err_missing_ide.exit_code(), 23);
@@ -571,6 +746,98 @@ mod tests {
     }
 
     #[test]
+    fn test_add_worktree_with_agent_execution() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_add_agent_exec_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let repo_dir = temp_dir.join("myrepo");
+        init_git_repo(&repo_dir);
+
+        let config_dir = temp_dir.join("config");
+        let result = add_worktree(
+            &[
+                "feat-agent".to_string(),
+                "--agent".to_string(),
+                "touch created_by_agent.txt".to_string(),
+            ],
+            Some(&repo_dir),
+            Some(&config_dir),
+            true,
+            None::<&mut Cursor<Vec<u8>>>,
+        );
+        assert!(result.is_ok());
+
+        let wt_path = temp_dir.join("gwt-myrepo").join("feat-agent");
+        let marker_file = wt_path.join("created_by_agent.txt");
+        assert!(marker_file.exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_add_worktree_with_agent_none_suppressed() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_add_agent_none_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let repo_dir = temp_dir.join("myrepo");
+        init_git_repo(&repo_dir);
+
+        let config_dir = temp_dir.join("config");
+        let result = add_worktree(
+            &[
+                "feat-agent-none".to_string(),
+                "-a".to_string(),
+                "none".to_string(),
+            ],
+            Some(&repo_dir),
+            Some(&config_dir),
+            true,
+            None::<&mut Cursor<Vec<u8>>>,
+        );
+        assert!(result.is_ok());
+
+        let wt_path = temp_dir.join("gwt-myrepo").join("feat-agent-none");
+        assert!(wt_path.exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_add_worktree_agent_prompt_empty_fails() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("gwt_test_add_agent_empty_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let repo_dir = temp_dir.join("myrepo");
+        init_git_repo(&repo_dir);
+
+        let config_dir = temp_dir.join("config");
+        let mut prompt_input = Cursor::new(b"   \n".to_vec());
+
+        let result = add_worktree(
+            &[
+                "feat-prompt-empty".to_string(),
+                "--agent".to_string(),
+            ],
+            Some(&repo_dir),
+            Some(&config_dir),
+            true,
+            Some(&mut prompt_input),
+        );
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.exit_code(), 46);
+        assert_eq!(err.to_string(), "no agent configured");
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
     fn test_add_error_exit_codes() {
         assert_eq!(AddError::MissingIdeArg.exit_code(), 23);
         assert_eq!(AddError::InvalidArgCount("".into()).exit_code(), 24);
@@ -578,6 +845,10 @@ mod tests {
         assert_eq!(AddError::CreateParentDir("".into()).exit_code(), 26);
         assert_eq!(AddError::GitWorktreeAdd("".into()).exit_code(), 27);
         assert_eq!(AddError::CdWorktree("".into()).exit_code(), 28);
+        assert_eq!(
+            AddError::Agent(crate::agent::AgentError::NoAgentConfigured).exit_code(),
+            46
+        );
         assert_eq!(
             AddError::Io(io::Error::other("io err")).exit_code(),
             1

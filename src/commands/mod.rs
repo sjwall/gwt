@@ -12,4 +12,5 @@ pub mod remove;
 pub mod skills;
 pub mod switch;
 pub mod track;
+pub mod upgrade;
 

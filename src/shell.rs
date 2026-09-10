@@ -51,7 +51,7 @@ gwt() {
         fi
         ;;
       *)
-        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "completion" ] && [ "$1" != "completions" ] && [ "$1" != "autocomplete" ] && [ "$1" != "help" ]; then
+        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "upgrade" ] && [ "$1" != "completion" ] && [ "$1" != "completions" ] && [ "$1" != "autocomplete" ] && [ "$1" != "help" ]; then
           local target
           target=$(command "$gwt_bin" "$@") || return $?
           if [ -n "$target" ] && [ -d "$target" ]; then

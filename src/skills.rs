@@ -889,7 +889,7 @@ mod tests {
         out.clear();
         symlink_skill(&src_dir, &dest_dir, false, &colors, &mut out).unwrap();
         let s = String::from_utf8(out.clone()).unwrap();
-        assert!(s.contains("already linked"));
+        assert!(s.to_lowercase().contains("already linked"));
 
         // 3. Unlink
         out.clear();

@@ -12,6 +12,7 @@ use gwt::commands::remove::RemoveArgs;
 use gwt::commands::skills::SkillsArgs;
 use gwt::commands::switch::SwitchArgs;
 use gwt::commands::track::TrackArgs;
+use gwt::commands::upgrade::UpgradeArgs;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -59,6 +60,8 @@ enum Commands {
     Config(ConfigArgs),
     /// Get or set configured IDE (defaults to nvim)
     Ide(IdeArgs),
+    /// Upgrade gwt repository
+    Upgrade(UpgradeArgs),
     /// Generate shell autocompletion script
     #[command(alias = "completions", alias = "autocomplete")]
     Completion(gwt::commands::completion::CompletionArgs),
@@ -272,6 +275,12 @@ fn main() {
         }
         Commands::Ide(args) => {
             if let Err(err) = gwt::commands::ide::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Upgrade(args) => {
+            if let Err(err) = gwt::commands::upgrade::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
@@ -654,5 +663,32 @@ fn test_preprocess_cli_args_completion() {
     assert_eq!(preprocess_cli_args(raw), vec!["gwt", "--autocomplete"]);
 }
 
+#[test]
+fn test_cli_upgrade_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "upgrade"]).unwrap();
+    match cli.command {
+        Commands::Upgrade(args) => {
+            assert!(args.dir.is_none());
+            assert!(args.args.is_empty());
+        }
+        _ => panic!("expected Upgrade command"),
+    }
 
+    let cli = Cli::try_parse_from(["gwt", "upgrade", "--dir", "/path/to/gwt", "--rebase"]).unwrap();
+    match cli.command {
+        Commands::Upgrade(args) => {
+            assert_eq!(args.dir.as_deref(), Some("/path/to/gwt"));
+            assert_eq!(args.args, vec!["--rebase"]);
+        }
+        _ => panic!("expected Upgrade command"),
+    }
+}
 
+#[test]
+fn test_preprocess_cli_args_upgrade() {
+    let raw = vec!["gwt", "upgrade"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "upgrade"]);
+
+    let raw = vec!["gwt", "upgrade", "--rebase"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "upgrade", "--rebase"]);
+}

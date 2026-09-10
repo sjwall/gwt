@@ -161,7 +161,7 @@ fn main() {
         Commands::List(args) => {
             if let Err(err) = gwt::commands::list::run_args(args) {
                 eprintln!("gwt: {err}");
-                std::process::exit(1);
+                std::process::exit(err.exit_code());
             }
         }
         Commands::Remove(args) => {
@@ -450,4 +450,50 @@ fn test_cli_default_invocation() {
         _ => panic!("expected Add command from default invocation"),
     }
 }
+
+#[test]
+fn test_cli_list_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "list"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert!(args.args.is_empty()),
+        _ => panic!("expected List command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "ls"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert!(args.args.is_empty()),
+        _ => panic!("expected List command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "ls", "my-repo"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert_eq!(args.args, vec!["my-repo"]),
+        _ => panic!("expected List command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "ls", "--porcelain"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert_eq!(args.args, vec!["--porcelain"]),
+        _ => panic!("expected List command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "ls", "-v", "my-repo"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert_eq!(args.args, vec!["-v", "my-repo"]),
+        _ => panic!("expected List command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "ls", "my-repo", "--porcelain"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert_eq!(args.args, vec!["my-repo", "--porcelain"]),
+        _ => panic!("expected List command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "ls", "repo1", "repo2"]).unwrap();
+    match cli.command {
+        Commands::List(args) => assert_eq!(args.args, vec!["repo1", "repo2"]),
+        _ => panic!("expected List command"),
+    }
+}
+
 

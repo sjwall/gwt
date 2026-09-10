@@ -111,8 +111,8 @@ pub fn get_all_tracked_repos(
             continue;
         }
 
-        let key = repo.to_string_lossy().to_string();
-        if !seen.insert(key) {
+        let canon = repo.canonicalize().unwrap_or_else(|_| repo.clone());
+        if !seen.insert(canon) {
             continue;
         }
 

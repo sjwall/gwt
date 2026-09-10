@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Create universal binary
+        run: |
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create -output target/universal-apple-darwin/release/gwt \
+            target/aarch64-apple-darwin/release/gwt \
+            target/x86_64-apple-darwin/release/gwt
+          file target/universal-apple-darwin/release/gwt
+
+      - name: Package macOS release assets
+        run: |
+          TAG="${{ github.ref_name }}"
+          DIST_DIR="dist"
+          mkdir -p "$DIST_DIR"
+
+          package_target() {
+            local target="$1"
+            local binary_path="$2"
+            local folder_name="gwt-${TAG}-${target}"
+
+            mkdir -p "$folder_name"
+            cp "$binary_path" "$folder_name/gwt"
+            chmod +x "$folder_name/gwt"
+            cp install.sh README.adoc LICENSE "$folder_name/" 2>/dev/null || true
+            [ -f "_gwt" ] && cp "_gwt" "$folder_name/"
+            [ -f "_gwt_wrapper" ] && cp "_gwt_wrapper" "$folder_name/"
+            [ -d ".agents" ] && cp -R ".agents" "$folder_name/"
+
+            tar -czf "$DIST_DIR/${folder_name}.tar.gz" "$folder_name"
+            zip -r "$DIST_DIR/${folder_name}.zip" "$folder_name"
+            rm -rf "$folder_name"
+          }
+
+          package_target "universal-apple-darwin" "target/universal-apple-darwin/release/gwt"
+          package_target "aarch64-apple-darwin" "target/aarch64-apple-darwin/release/gwt"
+          package_target "x86_64-apple-darwin" "target/x86_64-apple-darwin/release/gwt"
+
+      - name: Upload macOS assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-macos
+          path: dist/*
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install aarch64 cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --locked --target x86_64-unknown-linux-gnu
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
+            cargo build --release --locked --target aarch64-unknown-linux-gnu
+
+      - name: Package Linux release assets
+        run: |
+          TAG="${{ github.ref_name }}"
+          DIST_DIR="dist"
+          mkdir -p "$DIST_DIR"
+
+          package_target() {
+            local target="$1"
+            local binary_path="$2"
+            local folder_name="gwt-${TAG}-${target}"
+
+            mkdir -p "$folder_name"
+            cp "$binary_path" "$folder_name/gwt"
+            chmod +x "$folder_name/gwt"
+            cp install.sh README.adoc LICENSE "$folder_name/" 2>/dev/null || true
+            [ -f "_gwt" ] && cp "_gwt" "$folder_name/"
+            [ -f "_gwt_wrapper" ] && cp "_gwt_wrapper" "$folder_name/"
+            [ -d ".agents" ] && cp -R ".agents" "$folder_name/"
+
+            tar -czf "$DIST_DIR/${folder_name}.tar.gz" "$folder_name"
+            zip -r "$DIST_DIR/${folder_name}.zip" "$folder_name"
+            rm -rf "$folder_name"
+          }
+
+          package_target "x86_64-unknown-linux-gnu" "target/x86_64-unknown-linux-gnu/release/gwt"
+          package_target "aarch64-unknown-linux-gnu" "target/aarch64-unknown-linux-gnu/release/gwt"
+
+      - name: Upload Linux assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-linux
+          path: dist/*
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Build release binary
+        run: |
+          cargo build --release --locked --target x86_64-pc-windows-msvc
+
+      - name: Package Windows release assets
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          DIST_DIR="dist"
+          mkdir -p "$DIST_DIR"
+
+          target="x86_64-pc-windows-msvc"
+          folder_name="gwt-${TAG}-${target}"
+
+          mkdir -p "$folder_name"
+          cp "target/x86_64-pc-windows-msvc/release/gwt.exe" "$folder_name/gwt.exe"
+          cp install.sh README.adoc LICENSE "$folder_name/" 2>/dev/null || true
+          [ -f "_gwt" ] && cp "_gwt" "$folder_name/"
+          [ -f "_gwt_wrapper" ] && cp "_gwt_wrapper" "$folder_name/"
+          [ -d ".agents" ] && cp -R ".agents" "$folder_name/"
+
+          tar -czf "$DIST_DIR/${folder_name}.tar.gz" "$folder_name"
+          7z a "$DIST_DIR/${folder_name}.zip" "$folder_name"
+          rm -rf "$folder_name"
+
+      - name: Upload Windows assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-windows
+          path: dist/*
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-macos, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all built assets
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          generate_release_notes: true

@@ -71,6 +71,22 @@ pub fn launch_ide(
     config_dir: Option<&Path>,
 ) -> io::Result<()> {
     if let Some(ide_cmd) = resolve_ide_command(override_ide, config_dir) {
+        #[cfg(windows)]
+        let status = if let Ok(s) = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&ide_cmd)
+            .current_dir(dir)
+            .status()
+        {
+            s
+        } else {
+            std::process::Command::new("cmd")
+                .arg("/C")
+                .arg(&ide_cmd)
+                .current_dir(dir)
+                .status()?
+        };
+        #[cfg(not(windows))]
         let status = std::process::Command::new("sh")
             .arg("-c")
             .arg(&ide_cmd)

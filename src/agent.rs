@@ -175,6 +175,22 @@ pub fn launch_agent_with_reader<R: BufRead>(
         return Ok(());
     }
 
+    #[cfg(windows)]
+    let status = if let Ok(s) = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(&agent_cmd)
+        .current_dir(dir)
+        .status()
+    {
+        s
+    } else {
+        std::process::Command::new("cmd")
+            .arg("/C")
+            .arg(&agent_cmd)
+            .current_dir(dir)
+            .status()?
+    };
+    #[cfg(not(windows))]
     let status = std::process::Command::new("sh")
         .arg("-c")
         .arg(&agent_cmd)

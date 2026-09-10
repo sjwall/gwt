@@ -318,6 +318,36 @@ pub fn parse_skills_selection(input: &str) -> (HashSet<SkillTarget>, Vec<String>
     (selected, warnings)
 }
 
+fn create_symlink(src: &Path, target: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(src, target)
+    }
+    #[cfg(windows)]
+    {
+        if src.is_dir() {
+            std::os::windows::fs::symlink_dir(src, target)
+        } else {
+            std::os::windows::fs::symlink_file(src, target)
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        Err(io::Error::new(io::ErrorKind::Unsupported, "Symlinks not supported on this platform"))
+    }
+}
+
+fn remove_symlink(target: &Path) -> io::Result<()> {
+    #[cfg(windows)]
+    {
+        fs::remove_file(target).or_else(|_| fs::remove_dir(target))
+    }
+    #[cfg(not(windows))]
+    {
+        fs::remove_file(target)
+    }
+}
+
 /// Symlinks a single skill into `dest_dir`.
 pub fn symlink_skill<W: Write>(
     src: &Path,
@@ -343,13 +373,8 @@ pub fn symlink_skill<W: Write>(
             if current == src {
                 writeln!(
                     out,
-                    "{}==>{} {}Skill '{}' is already linked in {}{}",
-                    colors.blue,
-                    colors.reset,
-                    colors.bold,
-                    name.to_string_lossy(),
-                    disp_target,
-                    colors.reset
+                    "{}==>{} {}Already linked: {} -> {}{}",
+                    colors.blue, colors.reset, colors.bold, disp_target, disp_src, colors.reset
                 )?;
                 return Ok(());
             }
@@ -361,9 +386,8 @@ pub fn symlink_skill<W: Write>(
                 colors.blue, colors.reset, colors.bold, disp_target, disp_src, colors.reset
             )?;
         } else {
-            let _ = fs::remove_file(&target);
-            #[cfg(unix)]
-            std::os::unix::fs::symlink(src, &target)?;
+            let _ = remove_symlink(&target);
+            create_symlink(src, &target)?;
             writeln!(
                 out,
                 "{}==>{} {}Updated symlink: {} -> {}{}",
@@ -383,8 +407,7 @@ pub fn symlink_skill<W: Write>(
             colors.blue, colors.reset, colors.bold, disp_target, disp_src, colors.reset
         )?;
     } else {
-        #[cfg(unix)]
-        std::os::unix::fs::symlink(src, &target)?;
+        create_symlink(src, &target)?;
         writeln!(
             out,
             "{}==>{} {}Symlinked: {} -> {}{}",
@@ -418,7 +441,7 @@ pub fn unlink_skill<W: Write>(
                 colors.blue, colors.reset, colors.bold, disp_target, colors.reset
             )?;
         } else {
-            let _ = fs::remove_file(&target);
+            let _ = remove_symlink(&target);
             writeln!(
                 out,
                 "{}==>{} {}Removed symlink: {}{}",

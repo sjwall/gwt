@@ -1,321 +1,649 @@
 #!/bin/sh
 #
-# gwt installer
-# https://github.com/sjwall/gwt
+# install.sh - Install gwt (Git WorkTree Helper)
 #
-# Usage:
-#   curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh
+# By default, downloads and installs the latest version from GitHub Releases.
+# Also supports installing specific releases, local pre-built binaries,
+# or running in-place.
 #
-
 set -e
 
-# Configuration
-REPO_URL="${GWT_REPO_URL:-https://github.com/sjwall/gwt.git}"
-RAW_URL="${GWT_RAW_URL:-https://raw.githubusercontent.com/sjwall/gwt/main}"
-BRANCH="${GWT_BRANCH:-main}"
-INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gwt"
-
-# Setup colors if running in a terminal
-if [ -t 1 ]; then
-  BOLD="\033[1m"
-  GREEN="\033[32m"
-  BLUE="\033[34m"
-  YELLOW="\033[33m"
-  RED="\033[31m"
-  RESET="\033[0m"
-else
-  BOLD=""
-  GREEN=""
-  BLUE=""
-  YELLOW=""
-  RED=""
-  RESET=""
-fi
-
-info() {
-  printf "${BLUE}==>${RESET} ${BOLD}%s${RESET}\n" "$1"
-}
-
-success() {
-  printf "${GREEN}==>${RESET} ${BOLD}%s${RESET}\n" "$1"
-}
-
-warn() {
-  printf "${YELLOW}warning:${RESET} %s\n" "$1"
-}
-
-error() {
-  printf "${RED}error:${RESET} %s\n" "$1" >&2
-}
-
-# Parse command line options
+REPO="sjwall/gwt"
+DEFAULT_BIN_DIR="$HOME/.local/bin"
+BIN_DIR="$DEFAULT_BIN_DIR"
+DEFAULT_SHARE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gwt"
+SHARE_DIR="$DEFAULT_SHARE_DIR"
+RELEASE_TAG=""
+EXPLICIT_RELEASE=0
+IN_PLACE=0
+USE_LOCAL=0
+CUSTOM_BINARY=""
+ACTION="install"
+TMP_DIR=""
 SKILLS_ARG=""
+NO_SKILLS=0
 DRY_RUN=0
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --skills=*)
-      SKILLS_ARG="${1#--skills=}"
-      shift
-      ;;
-    --skills)
-      if [ $# -gt 1 ]; then
-        SKILLS_ARG="$2"
-        shift 2
-      else
-        error "--skills requires an argument"
-        exit 1
-      fi
-      ;;
-    --no-skills)
-      SKILLS_ARG="none"
-      shift
-      ;;
-    --dir=*)
-      INSTALL_DIR="${1#--dir=}"
-      shift
-      ;;
-    --dir)
-      if [ $# -gt 1 ]; then
-        INSTALL_DIR="$2"
-        shift 2
-      else
-        error "--dir requires an argument"
-        exit 1
-      fi
-      ;;
-    -n|--dry-run)
-      DRY_RUN=1
-      shift
-      ;;
-    --dry-run=*)
-      case "${1#--dry-run=}" in
-        0|false|no) DRY_RUN=0 ;;
-        *) DRY_RUN=1 ;;
-      esac
-      shift
-      ;;
-    -h|--help)
-      echo "Usage: install.sh [OPTIONS]"
-      echo ""
-      echo "Options:"
-      echo "  --skills=<targets>   Symlink skills to global agent directories"
-      echo "                       (comma-separated: agents, opencode, claude, gemini, all, none)"
-      echo "  --no-skills          Skip symlinking skills (same as --skills=none)"
-      echo "  --dir=<path>         Installation directory (default: ~/.local/share/gwt)"
-      echo "  -n, --dry-run        Perform a dry run without making any changes"
-      echo "  -h, --help           Show this help message"
-      exit 0
-      ;;
-    *)
-      warn "Unknown option: $1"
-      shift
-      ;;
-  esac
-done
-
-if [ "$DRY_RUN" -eq 1 ]; then
-  info "Running in dry-run mode. No changes will be made."
-fi
-
-IS_UPGRADE=0
-
-# Create parent directory if needed
-if [ "$DRY_RUN" -eq 1 ]; then
-  if [ ! -d "$(dirname "$INSTALL_DIR")" ]; then
-    info "Would create directory $(dirname "$INSTALL_DIR")"
-  fi
-else
-  mkdir -p "$(dirname "$INSTALL_DIR")"
-fi
-
-# Clone or update repository
-if [ -d "$INSTALL_DIR/.git" ]; then
-  IS_UPGRADE=1
-  if [ "$DRY_RUN" -eq 1 ]; then
-    info "Existing git repository found at $INSTALL_DIR."
-    if command -v git >/dev/null 2>&1; then
-      info "Would update git repository (git pull origin $BRANCH)"
-    else
-      warn "git command not found. Keeping existing repository."
+cleanup() {
+    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+        rm -rf "$TMP_DIR"
     fi
-  else
-    info "Existing git repository found at $INSTALL_DIR. Updating..."
-    if command -v git >/dev/null 2>&1; then
-      (
-        cd "$INSTALL_DIR"
-        git fetch origin "$BRANCH" 2>/dev/null || true
-        git checkout -q "$BRANCH" 2>/dev/null || true
-        git pull --ff-only origin "$BRANCH" 2>/dev/null || git pull --ff-only 2>/dev/null || warn "Could not fast-forward update git repository. Using existing files."
-      )
-    else
-      warn "git command not found. Keeping existing repository."
-    fi
-  fi
-elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
-  IS_UPGRADE=1
-  if [ "$DRY_RUN" -eq 1 ]; then
-    info "Existing installation found at $INSTALL_DIR."
-    if command -v curl >/dev/null 2>&1; then
-      info "Would download updated files from $RAW_URL using curl"
-    elif command -v wget >/dev/null 2>&1; then
-      info "Would download updated files from $RAW_URL using wget"
-    else
-      warn "Neither curl nor wget was found to update files. Keeping existing files."
-    fi
-  else
-    info "Existing installation found at $INSTALL_DIR. Updating..."
-    if command -v curl >/dev/null 2>&1; then
-      curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
-      curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
-      curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
-    elif command -v wget >/dev/null 2>&1; then
-      wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
-      wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
-      wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      wget -qO "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" "$RAW_URL/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
-    else
-      warn "Neither curl nor wget was found to update files. Keeping existing files."
-    fi
-  fi
-else
-  if [ "$DRY_RUN" -eq 1 ]; then
-    info "Would install gwt to $INSTALL_DIR..."
-    if command -v git >/dev/null 2>&1; then
-      info "Would clone repository from $REPO_URL ($BRANCH)"
-    elif command -v curl >/dev/null 2>&1; then
-      info "Would download files from $RAW_URL using curl"
-    elif command -v wget >/dev/null 2>&1; then
-      info "Would download files from $RAW_URL using wget"
-    else
-      error "Neither git, curl, nor wget was found. Please install one of them and try again."
-      exit 1
-    fi
-  else
-    info "Installing gwt to $INSTALL_DIR..."
-    if command -v git >/dev/null 2>&1; then
-      info "Cloning repository..."
-      git clone --depth=1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
-    elif command -v curl >/dev/null 2>&1; then
-      info "Downloading gwt.sh..."
-      mkdir -p "$INSTALL_DIR"
-      curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
-      curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
-      curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
-    elif command -v wget >/dev/null 2>&1; then
-      info "Downloading gwt.sh..."
-      mkdir -p "$INSTALL_DIR"
-      wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
-      wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
-      wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      wget -qO "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" "$RAW_URL/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
-    else
-      error "Neither git, curl, nor wget was found. Please install one of them and try again."
-      exit 1
-    fi
-  fi
-fi
+}
+trap cleanup EXIT INT TERM
 
-if [ "$DRY_RUN" -eq 0 ]; then
-  # Verify gwt.sh exists
-  if [ ! -f "$INSTALL_DIR/gwt.sh" ]; then
-    error "Failed to locate $INSTALL_DIR/gwt.sh"
-    exit 2
-  fi
+show_help() {
+    cat <<EOF
+Usage: $0 [OPTIONS]
 
-  chmod +x "$INSTALL_DIR/gwt.sh"
-fi
+Installs gwt (Git WorkTree Helper) and configures shell integration.
+By default, downloads and installs the latest release from GitHub ($REPO).
 
-# Configure shell profile
-detect_profile() {
-  if [ -n "$ZDOTDIR" ] && [ -f "$ZDOTDIR/.zshrc" ]; then
-    echo "$ZDOTDIR/.zshrc"
-  elif [ -f "$HOME/.zshrc" ]; then
-    echo "$HOME/.zshrc"
-  elif [ -f "$HOME/.bashrc" ]; then
-    echo "$HOME/.bashrc"
-  elif [ -f "$HOME/.profile" ]; then
-    echo "$HOME/.profile"
-  else
-    echo "$HOME/.zshrc"
-  fi
+OPTIONS:
+    -r, --release <TAG>   Release version/tag to install (e.g. 'v0.1.0' or 'latest', default: latest)
+    -v, --version <TAG>   Alias for --release
+    --bin-dir <DIR>       Directory to install the binary to (default: \$HOME/.local/bin)
+    --local               Install local pre-built binary instead of downloading
+    --in-place            Point shell integration directly to pre-built binary without copying
+    --binary <PATH>       Specify custom path to pre-built gwt binary
+    --skills <TARGETS>    Symlink skills to global agent directories
+                          (comma-separated: agents, opencode, claude, gemini, all, none)
+    --no-skills           Skip symlinking skills (same as --skills=none)
+    -n, --dry-run         Perform a dry run without making any changes
+    -u, --uninstall       Remove installed binary, clean up shell integration, and unlink skills
+    -h, --help            Show this help message
+
+EXAMPLES:
+    # Install latest release via curl
+    curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh
+
+    # Install specific release via curl
+    curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -- --release v0.1.0
+
+    # Install latest release using local script
+    ./install.sh
+
+    # Install specific release using local script
+    ./install.sh --release v0.1.0
+
+    # Install from local build
+    ./install.sh --local
+EOF
 }
 
-PROFILE_FILE="$(detect_profile)"
+detect_profile() {
+    if [ -n "$ZDOTDIR" ] && [ -f "$ZDOTDIR/.zshrc" ]; then
+        echo "$ZDOTDIR/.zshrc"
+    elif [ -f "$HOME/.zshrc" ]; then
+        echo "$HOME/.zshrc"
+    elif [ -f "$HOME/.bashrc" ]; then
+        echo "$HOME/.bashrc"
+    elif [ -f "$HOME/.bash_profile" ]; then
+        echo "$HOME/.bash_profile"
+    elif [ -f "$HOME/.profile" ]; then
+        echo "$HOME/.profile"
+    else
+        echo "$HOME/.zshrc"
+    fi
+}
 
-case "$INSTALL_DIR" in
-  "$HOME"/*)
-    FORMATTED_PATH="\$HOME/${INSTALL_DIR#"$HOME"/}"
-    ;;
-  *)
-    FORMATTED_PATH="$INSTALL_DIR"
-    ;;
+clean_legacy_profile_lines() {
+    target_file="$1"
+    if [ -f "$target_file" ] && grep -q -E "gwt\.sh|gwt --shell-wrapper|gwt --init|_gwt_wrapper" "$target_file" 2>/dev/null; then
+        tmp_clean="$(mktemp 2>/dev/null || mktemp -t gwt-clean)"
+        awk '!/gwt\.sh/ && !/gwt --shell-wrapper/ && !/gwt --init/ && !/_gwt_wrapper/ && !/# gwt \(git worktree helper\)/' "$target_file" > "$tmp_clean"
+        mv "$tmp_clean" "$target_file"
+    fi
+}
+
+uninstall() {
+    echo "==> Uninstalling gwt..."
+
+    # 1. Unlink agent skills if gwt binary is available
+    if command -v gwt >/dev/null 2>&1; then
+        echo "Removing agent skill symlinks..."
+        gwt skills none 2>/dev/null || true
+    elif [ -x "$BIN_DIR/gwt" ]; then
+        echo "Removing agent skill symlinks..."
+        "$BIN_DIR/gwt" skills none 2>/dev/null || true
+    elif [ -x "$BIN_DIR/gwt.exe" ]; then
+        echo "Removing agent skill symlinks..."
+        "$BIN_DIR/gwt.exe" skills none 2>/dev/null || true
+    fi
+
+    # 2. Remove installed binary
+    if [ -f "$BIN_DIR/gwt" ]; then
+        rm -f "$BIN_DIR/gwt"
+        echo "Removed binary: $BIN_DIR/gwt"
+    fi
+    if [ -f "$BIN_DIR/gwt.exe" ]; then
+        rm -f "$BIN_DIR/gwt.exe"
+        echo "Removed binary: $BIN_DIR/gwt.exe"
+    fi
+
+    # 3. Clean up shell profile
+    PROFILE_FILE="$(detect_profile)"
+    if [ -f "$PROFILE_FILE" ]; then
+        if grep -q -E "gwt\.sh|gwt --shell-wrapper|gwt --init|_gwt_wrapper" "$PROFILE_FILE" 2>/dev/null; then
+            echo "Removing shell integration from $PROFILE_FILE..."
+            clean_legacy_profile_lines "$PROFILE_FILE"
+            echo "Cleaned up shell configuration in $PROFILE_FILE"
+        fi
+    fi
+
+    # 4. Remove shared data directory if present and not a full git repo
+    if [ -d "$SHARE_DIR" ] && [ ! -d "$SHARE_DIR/.git" ]; then
+        rm -rf "$SHARE_DIR"
+        echo "Removed data directory: $SHARE_DIR"
+    fi
+
+    echo "==> gwt has been successfully uninstalled."
+    exit 0
+}
+
+resolve_latest_release() {
+    # 1. Try URL redirect of /releases/latest (fastest, unauthenticated, no rate limit)
+    LATEST_URL="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)"
+    RESOLVED="$(basename "$LATEST_URL")"
+    if [ -n "$RESOLVED" ] && [ "$RESOLVED" != "latest" ]; then
+        echo "$RESOLVED"
+        return 0
+    fi
+
+    # 2. Try GitHub API latest release
+    API_RESPONSE="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)"
+    RESOLVED="$(echo "$API_RESPONSE" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/')"
+    if [ -n "$RESOLVED" ]; then
+        echo "$RESOLVED"
+        return 0
+    fi
+
+    # 3. Fallback to HTML releases page (scrapes first tag link, no rate limit)
+    RESOLVED="$(curl -fsSL "https://github.com/${REPO}/releases" 2>/dev/null | grep -o '/releases/tag/[^"'\''?]*' | head -n 1 | sed 's|/releases/tag/||')"
+    if [ -n "$RESOLVED" ]; then
+        echo "$RESOLVED"
+        return 0
+    fi
+
+    # 4. Fallback to GitHub API list (for prereleases)
+    API_RESPONSE="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" 2>/dev/null || true)"
+    RESOLVED="$(echo "$API_RESPONSE" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"tag_name":[[:space:]]*"([^"]+)".*/\1/')"
+    if [ -n "$RESOLVED" ]; then
+        echo "$RESOLVED"
+        return 0
+    fi
+
+    return 1
+}
+
+# Parse command-line arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --release=*)
+            RELEASE_TAG="${1#*=}"
+            EXPLICIT_RELEASE=1
+            shift
+            ;;
+        -r|--release|-v|--version)
+            if [ -z "$2" ] || [ "${2#-}" != "$2" ]; then
+                echo "Error: $1 requires a release tag argument." >&2
+                exit 1
+            fi
+            RELEASE_TAG="$2"
+            EXPLICIT_RELEASE=1
+            shift 2
+            ;;
+        --version=*)
+            RELEASE_TAG="${1#*=}"
+            EXPLICIT_RELEASE=1
+            shift
+            ;;
+        --bin-dir=*)
+            BIN_DIR="${1#*=}"
+            shift
+            ;;
+        --bin-dir)
+            if [ -z "$2" ] || [ "${2#-}" != "$2" ]; then
+                echo "Error: --bin-dir requires a directory argument." >&2
+                exit 1
+            fi
+            BIN_DIR="$2"
+            shift 2
+            ;;
+        --binary=*)
+            CUSTOM_BINARY="${1#*=}"
+            shift
+            ;;
+        --binary)
+            if [ -z "$2" ] || [ "${2#-}" != "$2" ]; then
+                echo "Error: --binary requires a path argument." >&2
+                exit 1
+            fi
+            CUSTOM_BINARY="$2"
+            shift 2
+            ;;
+        --in-place)
+            IN_PLACE=1
+            shift
+            ;;
+        --local)
+            USE_LOCAL=1
+            shift
+            ;;
+        --skills=*)
+            SKILLS_ARG="${1#*=}"
+            shift
+            ;;
+        --skills)
+            if [ -z "$2" ] || [ "${2#-}" != "$2" ]; then
+                echo "Error: --skills requires a target argument." >&2
+                exit 1
+            fi
+            SKILLS_ARG="$2"
+            shift 2
+            ;;
+        --no-skills)
+            NO_SKILLS=1
+            shift
+            ;;
+        -n|--dry-run)
+            DRY_RUN=1
+            shift
+            ;;
+        --dry-run=*)
+            case "${1#*=}" in
+                0|false|no) DRY_RUN=0 ;;
+                *) DRY_RUN=1 ;;
+            esac
+            shift
+            ;;
+        -u|--uninstall)
+            ACTION="uninstall"
+            shift
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option '$1'." >&2
+            echo "Run '$0 --help' for usage." >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$ACTION" = "uninstall" ]; then
+    uninstall
+fi
+
+if [ "$EXPLICIT_RELEASE" -eq 1 ] && [ -n "$CUSTOM_BINARY" ]; then
+    echo "Error: Cannot specify both --release/--version and --binary." >&2
+    exit 1
+fi
+
+if [ "$EXPLICIT_RELEASE" -eq 1 ] && [ "$IN_PLACE" -eq 1 ]; then
+    echo "Error: Cannot specify both --release/--version and --in-place." >&2
+    exit 1
+fi
+
+if [ "$EXPLICIT_RELEASE" -eq 1 ] && [ "$USE_LOCAL" -eq 1 ]; then
+    echo "Error: Cannot specify both --release/--version and --local." >&2
+    exit 1
+fi
+
+if [ -n "$CUSTOM_BINARY" ] && [ "$USE_LOCAL" -eq 1 ]; then
+    echo "Error: Cannot specify both --binary and --local." >&2
+    exit 1
+fi
+
+if [ "$NO_SKILLS" -eq 1 ] && [ -n "$SKILLS_ARG" ] && [ "$SKILLS_ARG" != "none" ]; then
+    echo "Error: Cannot specify both --skills and --no-skills." >&2
+    exit 1
+fi
+
+OS="$(uname -s)"
+EXE_SUFFIX=""
+case "$OS" in
+    Darwin)
+        OS_TYPE="Darwin"
+        ;;
+    Linux)
+        OS_TYPE="Linux"
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        OS_TYPE="Windows"
+        EXE_SUFFIX=".exe"
+        ;;
+    *)
+        echo "Error: Unsupported operating system: '$OS'." >&2
+        exit 1
+        ;;
 esac
 
-SOURCE_LINE="[ -f \"$FORMATTED_PATH/gwt.sh\" ] && source \"$FORMATTED_PATH/gwt.sh\""
+BIN_NAME="gwt${EXE_SUFFIX}"
 
-if [ -f "$PROFILE_FILE" ] && grep -q "gwt.sh" "$PROFILE_FILE" 2>/dev/null; then
-  info "gwt is already configured in $PROFILE_FILE"
-else
-  if [ "$DRY_RUN" -eq 1 ]; then
-    info "Would add source line to $PROFILE_FILE"
-  else
-    info "Adding source line to $PROFILE_FILE..."
-    mkdir -p "$(dirname "$PROFILE_FILE")"
-    {
-      echo ""
-      echo "# gwt (git worktree helper)"
-      echo "$SOURCE_LINE"
-    } >> "$PROFILE_FILE"
-    success "Added gwt to $PROFILE_FILE"
-  fi
-fi
+echo "==> Setting up gwt..."
 
-# Skills management
-_dry_flag=""
-[ "$DRY_RUN" -eq 1 ] && _dry_flag="-n"
+# 1. Locate or download binary
+SOURCE_BIN=""
+PROJECT_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 
-_gwt_cmd=""
-if command -v gwt >/dev/null 2>&1; then
-  _gwt_cmd="gwt"
-elif [ -x "$INSTALL_DIR/gwt" ]; then
-  _gwt_cmd="$INSTALL_DIR/gwt"
-fi
-
-if [ -n "$_gwt_cmd" ]; then
-  if [ -n "$SKILLS_ARG" ]; then
-    $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag "$SKILLS_ARG"
-  elif [ "$IS_UPGRADE" -eq 1 ]; then
-    if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] || [ -t 0 ]; then
-      $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag --prompt
-    else
-      $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag --sync
+if [ -n "$CUSTOM_BINARY" ]; then
+    if [ ! -f "$CUSTOM_BINARY" ]; then
+        echo "Error: Specified binary does not exist: $CUSTOM_BINARY" >&2
+        exit 1
     fi
-  elif [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] || [ -t 0 ]; then
-    $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag --prompt
-  else
-    $_gwt_cmd skills --dir="$INSTALL_DIR" $_dry_flag none
-  fi
+    SOURCE_BIN="$CUSTOM_BINARY"
+    echo "Using specified binary: $SOURCE_BIN"
+
+elif [ "$IN_PLACE" -eq 1 ] || [ "$USE_LOCAL" -eq 1 ]; then
+    if [ -f "$PROJECT_DIR/target/release/gwt$EXE_SUFFIX" ]; then
+        SOURCE_BIN="$PROJECT_DIR/target/release/gwt$EXE_SUFFIX"
+    elif [ -f "$PROJECT_DIR/target/debug/gwt$EXE_SUFFIX" ]; then
+        SOURCE_BIN="$PROJECT_DIR/target/debug/gwt$EXE_SUFFIX"
+    elif [ -f "$PROJECT_DIR/gwt$EXE_SUFFIX" ]; then
+        SOURCE_BIN="$PROJECT_DIR/gwt$EXE_SUFFIX"
+    elif command -v "gwt$EXE_SUFFIX" >/dev/null 2>&1; then
+        SOURCE_BIN="$(command -v "gwt$EXE_SUFFIX")"
+    elif command -v gwt >/dev/null 2>&1; then
+        SOURCE_BIN="$(command -v gwt)"
+    fi
+
+    if [ -z "$SOURCE_BIN" ] || [ ! -f "$SOURCE_BIN" ]; then
+        echo "Error: Local pre-built gwt binary not found!" >&2
+        echo "Please build the project first:" >&2
+        echo "    cargo build --release" >&2
+        echo "" >&2
+        echo "Or omit --local/--in-place to download from GitHub releases." >&2
+        exit 1
+    fi
+    echo "Found local pre-built binary: $SOURCE_BIN"
+
+elif [ "$EXPLICIT_RELEASE" -eq 0 ] && \
+     [ "$0" != "sh" ] && [ "$0" != "-sh" ] && [ "$0" != "bash" ] && [ "$0" != "zsh" ] && \
+     [ -f "$PROJECT_DIR/gwt$EXE_SUFFIX" ] && [ -f "$PROJECT_DIR/LICENSE" ] && [ ! -d "$PROJECT_DIR/.git" ] && [ ! -f "$PROJECT_DIR/Cargo.toml" ]; then
+    # Running from an unpacked release archive
+    SOURCE_BIN="$PROJECT_DIR/gwt$EXE_SUFFIX"
+    echo "Using bundled release binary: $SOURCE_BIN"
+
+else
+    # Default: Download from GitHub Releases
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "Error: 'curl' is required to download gwt." >&2
+        exit 1
+    fi
+
+    TAG="$RELEASE_TAG"
+    if [ -z "$TAG" ] || [ "$TAG" = "latest" ]; then
+        echo "==> Fetching latest release info for ${REPO}..."
+        TAG="$(resolve_latest_release)" || true
+    fi
+
+    if [ -z "$TAG" ]; then
+        echo "Error: Could not determine the release version to install from ${REPO}." >&2
+        echo "Please specify a release version using: $0 --release <TAG>" >&2
+        exit 1
+    fi
+
+    # Normalize tag (prepend 'v' if it starts with a digit)
+    case "$TAG" in
+        v*) ;;
+        [0-9]*) TAG="v$TAG" ;;
+    esac
+
+    echo "Selected release: $TAG"
+
+    # Architecture detection
+    ARCH="$(uname -m)"
+    if [ "$OS_TYPE" = "Darwin" ]; then
+        if [ "$ARCH" = "x86_64" ] && [ "$(sysctl -in sysctl.proc_translated 2>/dev/null)" = "1" ]; then
+            ARCH="arm64"
+        fi
+
+        case "$ARCH" in
+            arm64|aarch64)
+                TARGET="aarch64-apple-darwin"
+                ;;
+            x86_64|amd64)
+                TARGET="x86_64-apple-darwin"
+                ;;
+            *)
+                TARGET="universal-apple-darwin"
+                ;;
+        esac
+    elif [ "$OS_TYPE" = "Linux" ]; then
+        case "$ARCH" in
+            arm64|aarch64)
+                TARGET="aarch64-unknown-linux-gnu"
+                ;;
+            x86_64|amd64)
+                TARGET="x86_64-unknown-linux-gnu"
+                ;;
+            *)
+                TARGET="${ARCH}-unknown-linux-gnu"
+                ;;
+        esac
+    elif [ "$OS_TYPE" = "Windows" ]; then
+        case "$ARCH" in
+            arm64|aarch64)
+                TARGET="aarch64-pc-windows-msvc"
+                ;;
+            *)
+                TARGET="x86_64-pc-windows-msvc"
+                ;;
+        esac
+    fi
+
+    TMP_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t 'gwt-install')"
+
+    ASSET_NAME="gwt-${TAG}-${TARGET}.tar.gz"
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_NAME}"
+
+    echo "==> Downloading gwt ${TAG} (${TARGET})..."
+    if ! curl --proto '=https' --tlsv1.2 -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$ASSET_NAME"; then
+        if [ "$OS_TYPE" = "Darwin" ] && [ "$TARGET" != "universal-apple-darwin" ]; then
+            echo "Target-specific archive not found, trying universal binary..."
+            TARGET="universal-apple-darwin"
+            ASSET_NAME="gwt-${TAG}-${TARGET}.tar.gz"
+            DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_NAME}"
+            if ! curl --proto '=https' --tlsv1.2 -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$ASSET_NAME"; then
+                echo "Error: Failed to download release asset for tag '${TAG}'." >&2
+                echo "URL: $DOWNLOAD_URL" >&2
+                exit 1
+            fi
+        elif [ "$OS_TYPE" = "Windows" ]; then
+            # Try zip fallback on Windows
+            ASSET_NAME="gwt-${TAG}-${TARGET}.zip"
+            DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_NAME}"
+            if ! curl --proto '=https' --tlsv1.2 -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$ASSET_NAME"; then
+                echo "Error: Failed to download release asset for tag '${TAG}'." >&2
+                echo "URL: $DOWNLOAD_URL" >&2
+                exit 1
+            fi
+        else
+            echo "Error: Failed to download release asset for tag '${TAG}'." >&2
+            echo "URL: $DOWNLOAD_URL" >&2
+            exit 1
+        fi
+    fi
+
+    # Verify checksum if SHA256SUMS.txt is available
+    CHECKSUM_URL="https://github.com/${REPO}/releases/download/${TAG}/SHA256SUMS.txt"
+    if curl --proto '=https' --tlsv1.2 -fsSL "$CHECKSUM_URL" -o "$TMP_DIR/SHA256SUMS.txt" 2>/dev/null; then
+        EXPECTED_SHA="$(grep "[[:space:]]${ASSET_NAME}\$" "$TMP_DIR/SHA256SUMS.txt" 2>/dev/null | awk '{print $1}')"
+        if [ -n "$EXPECTED_SHA" ]; then
+            if command -v shasum >/dev/null 2>&1; then
+                ACTUAL_SHA="$(shasum -a 256 "$TMP_DIR/$ASSET_NAME" | awk '{print $1}')"
+            elif command -v sha256sum >/dev/null 2>&1; then
+                ACTUAL_SHA="$(sha256sum "$TMP_DIR/$ASSET_NAME" | awk '{print $1}')"
+            else
+                ACTUAL_SHA=""
+            fi
+
+            if [ -n "$ACTUAL_SHA" ]; then
+                if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+                    echo "Error: Checksum verification failed for ${ASSET_NAME}!" >&2
+                    echo "  Expected: $EXPECTED_SHA" >&2
+                    echo "  Actual:   $ACTUAL_SHA" >&2
+                    exit 1
+                fi
+                echo "Checksum verified: $ACTUAL_SHA"
+            fi
+        fi
+    fi
+
+    # Extract archive
+    echo "==> Extracting $ASSET_NAME..."
+    case "$ASSET_NAME" in
+        *.tar.gz|*.tgz)
+            if ! command -v tar >/dev/null 2>&1; then
+                echo "Error: 'tar' is required to extract gwt archive." >&2
+                exit 1
+            fi
+            tar -xzf "$TMP_DIR/$ASSET_NAME" -C "$TMP_DIR"
+            ;;
+        *.zip)
+            if command -v unzip >/dev/null 2>&1; then
+                unzip -q "$TMP_DIR/$ASSET_NAME" -d "$TMP_DIR"
+            elif command -v tar >/dev/null 2>&1; then
+                tar -xf "$TMP_DIR/$ASSET_NAME" -C "$TMP_DIR"
+            else
+                echo "Error: 'unzip' or 'tar' is required to extract zip archive." >&2
+                exit 1
+            fi
+            ;;
+    esac
+
+    DOWNLOADED_BIN="$(find "$TMP_DIR" -type f \( -name "gwt" -o -name "gwt.exe" \) | head -n 1)"
+    if [ -z "$DOWNLOADED_BIN" ] || [ ! -f "$DOWNLOADED_BIN" ]; then
+        echo "Error: Could not locate 'gwt' binary in extracted archive." >&2
+        exit 1
+    fi
+    chmod +x "$DOWNLOADED_BIN"
+    SOURCE_BIN="$DOWNLOADED_BIN"
 fi
+
+# 2. Determine target binary path
+if [ "$IN_PLACE" -eq 1 ]; then
+    TARGET_BIN="$(cd "$(dirname "$SOURCE_BIN")" && pwd)/$(basename "$SOURCE_BIN")"
+    echo "Using binary in-place: $TARGET_BIN"
+else
+    echo "Installing binary to $BIN_DIR/$BIN_NAME..."
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "[dry-run] Would copy $SOURCE_BIN to $BIN_DIR/$BIN_NAME"
+    else
+        mkdir -p "$BIN_DIR"
+        cp "$SOURCE_BIN" "$BIN_DIR/$BIN_NAME"
+        chmod +x "$BIN_DIR/$BIN_NAME"
+    fi
+    TARGET_BIN="$BIN_DIR/$BIN_NAME"
+fi
+
+# 3. Setup shared data directory and agent skills
+if [ "$DRY_RUN" -eq 0 ]; then
+    mkdir -p "$SHARE_DIR/.agents/skills/gwt"
+    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ] && [ -d "$TMP_DIR/.agents/skills" ]; then
+        cp -R "$TMP_DIR/.agents/skills"/* "$SHARE_DIR/.agents/skills/" 2>/dev/null || true
+    elif [ -d "$PROJECT_DIR/.agents/skills" ]; then
+        cp -R "$PROJECT_DIR/.agents/skills"/* "$SHARE_DIR/.agents/skills/" 2>/dev/null || true
+    else
+        curl -fsSL "https://raw.githubusercontent.com/${REPO}/main/.agents/skills/gwt/SKILL.md" -o "$SHARE_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
+    fi
+
+    # Copy wrapper and completion scripts to data directory if present
+    if [ -f "$PROJECT_DIR/_gwt_wrapper" ]; then
+        cp "$PROJECT_DIR/_gwt_wrapper" "$SHARE_DIR/_gwt_wrapper" 2>/dev/null || true
+    fi
+    if [ -f "$PROJECT_DIR/_gwt" ]; then
+        cp "$PROJECT_DIR/_gwt" "$SHARE_DIR/_gwt" 2>/dev/null || true
+    fi
+fi
+
+# 4. Configure shell integration
+PROFILE_FILE="$(detect_profile)"
+
+if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Would clean legacy gwt.sh references and ensure shell integration in $PROFILE_FILE"
+else
+    # Remove any old gwt.sh references
+    if [ -f "$PROFILE_FILE" ] && grep -q "gwt\.sh" "$PROFILE_FILE" 2>/dev/null; then
+        echo "Removing legacy gwt.sh configuration from $PROFILE_FILE..."
+        clean_legacy_profile_lines "$PROFILE_FILE"
+    fi
+
+    # Check if shell wrapper is already present
+    if [ -f "$PROFILE_FILE" ] && grep -q -E "gwt --shell-wrapper|gwt --init|_gwt_wrapper" "$PROFILE_FILE" 2>/dev/null; then
+        echo "Shell integration already present in $PROFILE_FILE"
+    else
+        echo "Adding shell integration to $PROFILE_FILE..."
+        mkdir -p "$(dirname "$PROFILE_FILE")"
+        {
+            echo ""
+            echo "# gwt (git worktree helper)"
+            echo "eval \"\$(gwt --shell-wrapper)\""
+        } >> "$PROFILE_FILE"
+        echo "Added shell wrapper to $PROFILE_FILE"
+    fi
+fi
+
+# 5. Link agent skills
+dry_flag=""
+[ "$DRY_RUN" -eq 1 ] && dry_flag="-n"
+
+if [ "$NO_SKILLS" -eq 1 ]; then
+    echo "Skipping skills symlinking (--no-skills specified)."
+elif [ -n "$SKILLS_ARG" ]; then
+    if [ "$SKILLS_ARG" != "none" ]; then
+        echo "Configuring agent skills: $SKILLS_ARG..."
+        if [ "$DRY_RUN" -eq 0 ]; then
+            "$TARGET_BIN" skills --dir="$SHARE_DIR" "$SKILLS_ARG" 2>/dev/null || true
+        else
+            echo "[dry-run] Would run: $TARGET_BIN skills --dir=$SHARE_DIR $SKILLS_ARG"
+        fi
+    fi
+elif [ -t 0 ] || ([ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]); then
+    if [ "$DRY_RUN" -eq 0 ]; then
+        "$TARGET_BIN" skills --dir="$SHARE_DIR" --prompt </dev/tty || true
+    fi
+else
+    if [ "$DRY_RUN" -eq 0 ]; then
+        "$TARGET_BIN" skills --dir="$SHARE_DIR" --sync 2>/dev/null || true
+    fi
+fi
+
+UNINSTALL_CMD="$0 --uninstall"
+case "$0" in
+    sh|-sh|bash|zsh)
+        UNINSTALL_CMD="curl -fsSL https://raw.githubusercontent.com/${REPO}/main/install.sh | sh -s -- --uninstall"
+        ;;
+esac
 
 echo ""
-if [ "$DRY_RUN" -eq 1 ]; then
-  info "Dry run complete! No changes were made."
-else
-  if [ "$IS_UPGRADE" -eq 1 ]; then
-    success "gwt upgraded successfully!"
-  else
-    success "gwt installed successfully!"
-  fi
-  echo ""
-  echo "To start using gwt, reload your shell configuration:"
-  echo "  source $PROFILE_FILE"
-  echo ""
-  echo "Or start a new terminal session."
-fi
+echo "================================================================="
+echo "                  gwt Installation Complete                      "
+echo "================================================================="
+echo "Binary:        $TARGET_BIN"
+echo "Shell config:  $PROFILE_FILE"
+echo "Data dir:      $SHARE_DIR"
+echo ""
+
+case ":$PATH:" in
+    *:"$(dirname "$TARGET_BIN")":*) ;;
+    *)
+        echo "PATH Notice:"
+        echo "  '$(dirname "$TARGET_BIN")' is not in your current PATH."
+        echo "  Consider adding it to your shell configuration (e.g. ~/.zshrc):"
+        echo "      export PATH=\"$(dirname "$TARGET_BIN"):\$PATH\""
+        echo ""
+        ;;
+esac
+
+echo "To start using gwt, reload your shell configuration:"
+echo "  source $PROFILE_FILE"
+echo ""
+echo "Or start a new terminal session."
+echo ""
+echo "Management commands:"
+echo "  Manage skills: gwt skills"
+echo "  Uninstall:     $UNINSTALL_CMD"
+echo "================================================================="

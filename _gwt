@@ -1,4 +1,4 @@
-#compdef gwt
+#compdef gwt gwt-bin
 # ------------------------------------------------------------------------------
 # Zsh Completion Definition for gwt (Git WorkTree Helper)
 # https://github.com/sjwall/gwt
@@ -200,12 +200,24 @@ _gwt() {
     'skills:Manage agent skill symlinks'
     'migrate:Migrate worktrees to match expected path pattern'
     'upgrade:Upgrade gwt repository'
+    'completion:Generate shell autocompletion script'
+    'completions:Alias for completion'
+    'autocomplete:Alias for completion'
+    'init:Print shell integration wrapper function'
+    'shell-wrapper:Alias for init'
   )
 
   _arguments -C \
     '--ide=[Override IDE to launch]:IDE:_gwt_comp_ides' \
     '(-a --agent)'{-a,--agent}'[Launch agent instead of IDE]::agent command: ' \
     '--no-install[Skip dependency installation]' \
+    '--shell-wrapper[Print shell integration wrapper function]' \
+    '--init[Alias for --shell-wrapper]' \
+    '--completion=[Generate shell autocompletion script]:shell:(zsh)' \
+    '--completions=[Alias for --completion]:shell:(zsh)' \
+    '--autocomplete=[Alias for --completion]:shell:(zsh)' \
+    '(-h --help)'{-h,--help}'[Print help]' \
+    '(-V --version)'{-V,--version}'[Print version]' \
     '1:subcommand:->subcmd' \
     '*::arguments:->args' && return 0
 
@@ -279,6 +291,12 @@ _gwt() {
         skills)
           _arguments \
             '(-n --dry-run)'{-n,--dry-run}'[Perform a dry run without making changes]' \
+            '--dir=[Installation directory]:directory:_files -/' \
+            '--skills=[Specific skills selection]:selection: ' \
+            '--no-skills[Skip skills symlinking]' \
+            '--sync[Update symlinks for currently linked agents]' \
+            '--list[List current symlink status for all agents]' \
+            '--prompt[Show interactive selection prompt]' \
             '1:targets:->skills_targets' && return 0
           ;;
         migrate)
@@ -287,6 +305,12 @@ _gwt() {
             '(-f --force -force)'{-f,--force,-force}'[Force move even if worktree is dirty or locked]' && return 0
           ;;
         upgrade)
+          ;;
+        completion|completions|autocomplete)
+          _arguments \
+            '1:shell:(zsh)' && return 0
+          ;;
+        init|shell-wrapper)
           ;;
         *)
           _arguments \
@@ -309,6 +333,7 @@ _gwt() {
             'none:Remove all skill symlinks'
             'list:List status of all agent skill symlinks'
             'sync:Sync skills for already linked agents'
+            'prompt:Show interactive selection prompt'
           )
           _describe -t targets 'target' targets
           ;;
@@ -332,6 +357,11 @@ _gwt() {
 # If executing inside Zsh completion context (e.g. autoloaded on first Tab press)
 if (( $+compstate )); then
   _gwt "$@"
+fi
+
+if (( $+functions[compdef] )); then
+  compdef _gwt gwt 2>/dev/null || true
+  compdef _gwt gwt-bin 2>/dev/null || true
 fi
 
 

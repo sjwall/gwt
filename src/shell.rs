@@ -1,5 +1,8 @@
 use std::path::Path;
 
+/// Zsh completion script definition for `gwt` matching `_gwt`.
+pub const ZSH_COMPLETION: &str = include_str!("../_gwt");
+
 /// Shell wrapper script for `gwt`.
 ///
 /// This wrapper can be sourced directly or evaluated in user shell profiles:
@@ -48,7 +51,7 @@ gwt() {
         fi
         ;;
       *)
-        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "help" ]; then
+        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "completion" ] && [ "$1" != "completions" ] && [ "$1" != "autocomplete" ] && [ "$1" != "help" ]; then
           local target
           target=$(command "$gwt_bin" "$@") || return $?
           if [ -n "$target" ] && [ -d "$target" ]; then
@@ -61,6 +64,20 @@ gwt() {
     esac
   fi
 }
+
+# Autocompletion for zsh
+if [ -n "$ZSH_VERSION" ]; then
+  _gwt_comp_bin="gwt"
+  if ! command -v "$_gwt_comp_bin" >/dev/null 2>&1; then
+    if command -v gwt-bin >/dev/null 2>&1; then
+      _gwt_comp_bin="gwt-bin"
+    fi
+  fi
+  if command -v "$_gwt_comp_bin" >/dev/null 2>&1; then
+    eval "$("$_gwt_comp_bin" completion zsh 2>/dev/null || "$_gwt_comp_bin" --completion zsh 2>/dev/null)"
+  fi
+  unset _gwt_comp_bin
+fi
 "#;
 
 /// Notifies a parent shell wrapper of a target directory to `cd` into.
@@ -79,11 +96,21 @@ mod tests {
     use std::fs;
 
     #[test]
+    fn test_zsh_completion_constant() {
+        assert!(ZSH_COMPLETION.contains("#compdef gwt"));
+        assert!(ZSH_COMPLETION.contains("_gwt()"));
+        assert!(ZSH_COMPLETION.contains("_gwt_comp_worktrees"));
+        assert!(ZSH_COMPLETION.contains("_gwt_comp_repositories"));
+    }
+
+    #[test]
     fn test_shell_wrapper_contains_essential_elements() {
         assert!(SHELL_WRAPPER.contains("gwt()"));
         assert!(SHELL_WRAPPER.contains("GWT_CD_FILE"));
         assert!(SHELL_WRAPPER.contains("builtin cd"));
         assert!(SHELL_WRAPPER.contains("return 14"));
+        assert!(SHELL_WRAPPER.contains("ZSH_VERSION"));
+        assert!(SHELL_WRAPPER.contains("completion zsh"));
     }
 
     #[test]

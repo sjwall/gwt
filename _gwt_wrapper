@@ -42,7 +42,7 @@ gwt() {
         fi
         ;;
       *)
-        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "help" ]; then
+        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "completion" ] && [ "$1" != "completions" ] && [ "$1" != "autocomplete" ] && [ "$1" != "help" ]; then
           local target
           target=$(command "$gwt_bin" "$@") || return $?
           if [ -n "$target" ] && [ -d "$target" ]; then
@@ -55,3 +55,17 @@ gwt() {
     esac
   fi
 }
+
+# Autocompletion for zsh
+if [ -n "$ZSH_VERSION" ]; then
+  _gwt_comp_bin="gwt"
+  if ! command -v "$_gwt_comp_bin" >/dev/null 2>&1; then
+    if command -v gwt-bin >/dev/null 2>&1; then
+      _gwt_comp_bin="gwt-bin"
+    fi
+  fi
+  if command -v "$_gwt_comp_bin" >/dev/null 2>&1; then
+    eval "$("$_gwt_comp_bin" completion zsh 2>/dev/null || "$_gwt_comp_bin" --completion zsh 2>/dev/null)"
+  fi
+  unset _gwt_comp_bin
+fi

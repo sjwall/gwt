@@ -235,3 +235,160 @@ fn test_shell_wrapper_execution_in_zsh() {
 
     let _ = fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn test_zsh_completion_file_matches_constant() {
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let comp_path = repo_root.join("_gwt");
+    assert!(comp_path.is_file(), "_gwt should exist in repo root");
+
+    let content = fs::read_to_string(comp_path).unwrap();
+    assert_eq!(content, gwt::shell::ZSH_COMPLETION);
+}
+
+#[test]
+fn test_zsh_syntax_of_completion_script() {
+    let status = Command::new("zsh")
+        .args(["-n", "-c", gwt::shell::ZSH_COMPLETION])
+        .status();
+    if let Ok(st) = status {
+        assert!(st.success(), "Zsh completion script failed syntax check under zsh -n");
+    }
+}
+
+#[test]
+fn test_cli_completion_flags() {
+    let gwt_bin = env!("CARGO_BIN_EXE_gwt");
+
+    // Test --completion
+    let output = Command::new(gwt_bin)
+        .arg("--completion")
+        .output()
+        .expect("failed to execute gwt --completion");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test --completion zsh
+    let output = Command::new(gwt_bin)
+        .args(["--completion", "zsh"])
+        .output()
+        .expect("failed to execute gwt --completion zsh");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test --completion=zsh
+    let output = Command::new(gwt_bin)
+        .arg("--completion=zsh")
+        .output()
+        .expect("failed to execute gwt --completion=zsh");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test --completions
+    let output = Command::new(gwt_bin)
+        .arg("--completions")
+        .output()
+        .expect("failed to execute gwt --completions");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test --autocomplete
+    let output = Command::new(gwt_bin)
+        .arg("--autocomplete")
+        .output()
+        .expect("failed to execute gwt --autocomplete");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+}
+
+#[test]
+fn test_cli_completion_subcommands() {
+    let gwt_bin = env!("CARGO_BIN_EXE_gwt");
+
+    // Test `gwt completion`
+    let output = Command::new(gwt_bin)
+        .arg("completion")
+        .output()
+        .expect("failed to execute gwt completion");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test `gwt completion zsh`
+    let output = Command::new(gwt_bin)
+        .args(["completion", "zsh"])
+        .output()
+        .expect("failed to execute gwt completion zsh");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test `gwt completions`
+    let output = Command::new(gwt_bin)
+        .arg("completions")
+        .output()
+        .expect("failed to execute gwt completions");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+
+    // Test `gwt autocomplete`
+    let output = Command::new(gwt_bin)
+        .arg("autocomplete")
+        .output()
+        .expect("failed to execute gwt autocomplete");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), gwt::shell::ZSH_COMPLETION);
+}
+
+#[test]
+fn test_cli_completion_unsupported_shell() {
+    let gwt_bin = env!("CARGO_BIN_EXE_gwt");
+
+    let output = Command::new(gwt_bin)
+        .args(["completion", "fish"])
+        .output()
+        .expect("failed to execute gwt completion fish");
+    assert!(!output.status.success());
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("unsupported shell: 'fish'"));
+}
+
+#[test]
+fn test_zsh_completion_loading_in_zsh() {
+    let temp_dir = std::env::temp_dir().join(format!("gwt_test_zsh_comp_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&temp_dir);
+    fs::create_dir_all(&temp_dir).unwrap();
+
+    let gwt_bin = env!("CARGO_BIN_EXE_gwt");
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let _ = std::os::unix::fs::symlink(gwt_bin, bin_dir.join("gwt"));
+
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let wrapper_file = repo_root.join("_gwt_wrapper");
+
+    let zsh_script = format!(
+        r#"
+        export PATH="{}:$PATH"
+        autoload -Uz compinit && compinit -D
+        source "{}"
+        # Verify that _gwt is loaded and registered
+        which _gwt >/dev/null 2>&1 || exit 1
+        whence -v _gwt
+        "#,
+        bin_dir.display(),
+        wrapper_file.display()
+    );
+
+    let output = Command::new("zsh")
+        .args(["-f", "-c", &zsh_script])
+        .output();
+
+    if let Ok(out) = output {
+        assert!(out.status.success(), "zsh completion eval failed: {:?}", String::from_utf8_lossy(&out.stderr));
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(stdout.contains("_gwt is a shell function"), "expected _gwt function definition in zsh, got: {}", stdout);
+    }
+
+    let _ = fs::remove_dir_all(&temp_dir);
+}
+

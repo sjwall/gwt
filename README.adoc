@@ -107,15 +107,24 @@ source /path/to/_gwt_wrapper
 
 == Autocompletion
 
-`gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
+`gwt` includes built-in Zsh autocompletion support. When `gwt.sh` or the shell wrapper (`eval "$(gwt --init)"`) is sourced, or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `skills`, `migrate`, `upgrade`)
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `skills`, `migrate`, `upgrade`, `completion`)
 * Worktree names and paths for `gwt cd`, `gwt switch`, `gwt agent`, and `gwt remove`
 * Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`
 * Branches for `gwt add`
 * Subcommands and configuration keys for `gwt config`
 * Configured IDE and agent options for `gwt ide`, `--ide`, and `--agent` / `-a` flags
+
+Zsh completions can also be printed directly or evaluated:
+
+[source,sh]
+----
+gwt completion zsh > ~/.zsh/completion/_gwt
+# or load dynamically via shell wrapper:
+eval "$(gwt --init)"
+----
 
 
 == Exit Codes

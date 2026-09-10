@@ -59,6 +59,9 @@ enum Commands {
     Config(ConfigArgs),
     /// Get or set configured IDE (defaults to nvim)
     Ide(IdeArgs),
+    /// Generate shell autocompletion script
+    #[command(alias = "completions", alias = "autocomplete")]
+    Completion(gwt::commands::completion::CompletionArgs),
 }
 
 /// Preprocesses raw CLI arguments to support default subcommand omission (`gwt <branch>`),
@@ -81,7 +84,7 @@ where
 
     let first_arg = &args[1];
 
-    // Top-level flags for help, version, and shell-wrapper should not be rewritten
+    // Top-level flags for help, version, shell-wrapper, and completion should not be rewritten
     if first_arg == "--help"
         || first_arg == "-h"
         || first_arg == "help"
@@ -91,6 +94,12 @@ where
         || first_arg == "--init"
         || first_arg == "shell-wrapper"
         || first_arg == "init"
+        || first_arg == "--completion"
+        || first_arg == "--completions"
+        || first_arg == "--autocomplete"
+        || first_arg.starts_with("--completion=")
+        || first_arg.starts_with("--completions=")
+        || first_arg.starts_with("--autocomplete=")
     {
         return args;
     }
@@ -121,6 +130,9 @@ where
             | "track"
             | "t"
             | "upgrade"
+            | "completion"
+            | "completions"
+            | "autocomplete"
     );
 
     if !is_subcommand {
@@ -132,14 +144,49 @@ where
 
 fn main() {
     let args = preprocess_cli_args(std::env::args());
-    if args.len() > 1
-        && (args[1] == "--shell-wrapper"
-            || args[1] == "--init"
-            || args[1] == "shell-wrapper"
-            || args[1] == "init")
-    {
-        print!("{}", gwt::shell::SHELL_WRAPPER);
-        return;
+    if args.len() > 1 {
+        let first = &args[1];
+        if first == "--shell-wrapper"
+            || first == "--init"
+            || first == "shell-wrapper"
+            || first == "init"
+        {
+            print!("{}", gwt::shell::SHELL_WRAPPER);
+            return;
+        }
+
+        if first == "--completion" || first == "--completions" || first == "--autocomplete" {
+            let shell_arg = if args.len() > 2 {
+                Some(args[2].as_str())
+            } else {
+                None
+            };
+            match gwt::commands::completion::execute_completion(shell_arg) {
+                Ok(script) => {
+                    print!("{script}");
+                    return;
+                }
+                Err(err) => {
+                    eprintln!("gwt: {err}");
+                    std::process::exit(err.exit_code());
+                }
+            }
+        } else if let Some(val) = first
+            .strip_prefix("--completion=")
+            .or_else(|| first.strip_prefix("--completions="))
+            .or_else(|| first.strip_prefix("--autocomplete="))
+        {
+            match gwt::commands::completion::execute_completion(Some(val)) {
+                Ok(script) => {
+                    print!("{script}");
+                    return;
+                }
+                Err(err) => {
+                    eprintln!("gwt: {err}");
+                    std::process::exit(err.exit_code());
+                }
+            }
+        }
     }
 
     let cli = Cli::parse_from(args);
@@ -225,6 +272,12 @@ fn main() {
         }
         Commands::Ide(args) => {
             if let Err(err) = gwt::commands::ide::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
+        Commands::Completion(args) => {
+            if let Err(err) = gwt::commands::completion::run_args(args) {
                 eprintln!("gwt: {err}");
                 std::process::exit(err.exit_code());
             }
@@ -549,5 +602,57 @@ fn test_cli_list_parsing() {
         _ => panic!("expected List command"),
     }
 }
+
+#[test]
+fn test_cli_completion_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "completion"]).unwrap();
+    match cli.command {
+        Commands::Completion(args) => assert_eq!(args.shell, None),
+        _ => panic!("expected Completion command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "completion", "zsh"]).unwrap();
+    match cli.command {
+        Commands::Completion(args) => assert_eq!(args.shell.as_deref(), Some("zsh")),
+        _ => panic!("expected Completion command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "completions"]).unwrap();
+    match cli.command {
+        Commands::Completion(args) => assert_eq!(args.shell, None),
+        _ => panic!("expected Completion command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "autocomplete", "zsh"]).unwrap();
+    match cli.command {
+        Commands::Completion(args) => assert_eq!(args.shell.as_deref(), Some("zsh")),
+        _ => panic!("expected Completion command"),
+    }
+}
+
+#[test]
+fn test_preprocess_cli_args_completion() {
+    let raw = vec!["gwt", "completion", "zsh"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "completion", "zsh"]);
+
+    let raw = vec!["gwt", "completions"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "completions"]);
+
+    let raw = vec!["gwt", "autocomplete"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "autocomplete"]);
+
+    let raw = vec!["gwt", "--completion"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "--completion"]);
+
+    let raw = vec!["gwt", "--completion=zsh"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "--completion=zsh"]);
+
+    let raw = vec!["gwt", "--completions"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "--completions"]);
+
+    let raw = vec!["gwt", "--autocomplete"];
+    assert_eq!(preprocess_cli_args(raw), vec!["gwt", "--autocomplete"]);
+}
+
 
 

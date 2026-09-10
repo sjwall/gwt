@@ -402,6 +402,7 @@ pub fn main_cmd(
     let query = args.first().map(|s| s.as_str());
     let path = resolve_main_repo(query, current_dir, config_dir)?;
     println!("{}", path.display());
+    crate::shell::notify_cd_target(&path);
     Ok(path)
 }
 
@@ -416,6 +417,7 @@ pub fn main_ide_cmd(
     let parsed = parse_main_ide_args(args)?;
     let path = resolve_main_repo(parsed.query.as_deref(), current_dir, config_dir)?;
     println!("{}", path.display());
+    crate::shell::notify_cd_target(&path);
     if launch {
         launch_ide(parsed.ide.as_deref(), &path, config_dir)?;
     }

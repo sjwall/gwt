@@ -211,6 +211,7 @@ pub fn pull_worktree_args<R: io::BufRead>(
     let mut fetch_cmd = Command::new("git");
     fetch_cmd.arg("-C").arg(target_repo);
     fetch_cmd.args(["fetch", "origin", &parsed.branch]);
+    fetch_cmd.stdout(std::io::stderr());
 
     let fetch_status = fetch_cmd
         .status()
@@ -255,6 +256,7 @@ pub fn pull_worktree_args<R: io::BufRead>(
             &format!("origin/{}", parsed.branch),
         ]);
     }
+    git_cmd.stdout(std::io::stderr());
 
     let status = git_cmd
         .status()
@@ -267,8 +269,11 @@ pub fn pull_worktree_args<R: io::BufRead>(
         return Err(PullError::CdWorktree(String::new()));
     }
 
+    crate::shell::notify_cd_target(&dest);
+
     if !parsed.no_install && dest.join("yarn.lock").is_file() {
         let _ = Command::new("yarn")
+            .stdout(std::io::stderr())
             .current_dir(&dest)
             .status();
     }
@@ -295,12 +300,16 @@ pub fn pull_worktree<R: io::BufRead>(
 
 /// Runs the `pull` command with parsed `PullArgs`.
 pub fn run_args(args: &PullArgs) -> Result<PathBuf, PullError> {
-    pull_worktree_args(args, None, None, true, None::<&mut io::Empty>)
+    let dest = pull_worktree_args(args, None, None, true, None::<&mut io::Empty>)?;
+    println!("{}", dest.display());
+    Ok(dest)
 }
 
 /// Runs the `pull` command with CLI arguments.
 pub fn run(args: &[String]) -> Result<PathBuf, PullError> {
-    pull_worktree(args, None, None, true, None::<&mut io::Empty>)
+    let dest = pull_worktree(args, None, None, true, None::<&mut io::Empty>)?;
+    println!("{}", dest.display());
+    Ok(dest)
 }
 
 #[cfg(test)]

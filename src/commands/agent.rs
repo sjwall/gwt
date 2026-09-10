@@ -165,6 +165,7 @@ pub fn agent_worktree_args<R: BufRead>(
 ) -> Result<PathBuf, AgentCmdError> {
     let path = find_matching_worktree(&parsed.query, current_dir, config_dir)?;
 
+    crate::shell::notify_cd_target(&path);
     if launch {
         launch_agent_with_reader(
             parsed.agent.as_deref(),
@@ -192,18 +193,22 @@ pub fn agent_worktree<R: BufRead>(
 
 /// Runs the `agent` command with parsed `AgentArgs`.
 pub fn run_args(args: &AgentArgs) -> Result<PathBuf, AgentCmdError> {
-    agent_worktree(
+    let path = agent_worktree(
         &args.args,
         None,
         None,
         true,
         None::<&mut io::Empty>,
-    )
+    )?;
+    println!("{}", path.display());
+    Ok(path)
 }
 
 /// Runs the `agent` command with CLI arguments.
 pub fn run(args: &[String]) -> Result<PathBuf, AgentCmdError> {
-    agent_worktree(args, None, None, true, None::<&mut io::Empty>)
+    let path = agent_worktree(args, None, None, true, None::<&mut io::Empty>)?;
+    println!("{}", path.display());
+    Ok(path)
 }
 
 #[cfg(test)]

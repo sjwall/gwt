@@ -173,7 +173,7 @@ pub fn is_linked_worktree(cwd: Option<&Path>, main_repo: Option<&Path>) -> bool 
 pub fn remove_worktree_args(
     parsed: &RemoveArgs,
     current_dir: Option<&Path>,
-) -> Result<(), RemoveError> {
+) -> Result<Option<PathBuf>, RemoveError> {
     let main_repo = get_current_main_repo(current_dir);
 
     let mut flags = Vec::new();
@@ -195,7 +195,7 @@ pub fn remove_worktree_args(
             if !status.success() {
                 return Err(RemoveError::GitWorktreeRemove(String::new()));
             }
-            return Ok(());
+            return Ok(None);
         }
         Some(repo) => repo,
     };
@@ -245,11 +245,20 @@ pub fn remove_worktree_args(
         )));
     }
 
+    if linked && current_dir.is_none() {
+        if let Err(e) = std::env::set_current_dir(&target_repo) {
+            return Err(RemoveError::CdMainRepo(format!(
+                "failed to change directory to main repo: {e}"
+            )));
+        }
+    }
+
     let mut git_cmd = Command::new("git");
     git_cmd.arg("-C").arg(&target_repo);
     git_cmd.args(["worktree", "remove"]);
     git_cmd.args(&flags);
     git_cmd.args(&targets);
+    git_cmd.stdout(std::io::stderr());
 
     let status = git_cmd
         .status()
@@ -259,26 +268,40 @@ pub fn remove_worktree_args(
         return Err(RemoveError::GitWorktreeRemove(String::new()));
     }
 
-    Ok(())
+    if linked {
+        crate::shell::notify_cd_target(&target_repo);
+        Ok(Some(target_repo))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Removes one or more git worktrees according to the specified arguments.
 pub fn remove_worktree(
     args: &[String],
     current_dir: Option<&Path>,
-) -> Result<(), RemoveError> {
+) -> Result<Option<PathBuf>, RemoveError> {
     let parsed = parse_remove_args(args);
     remove_worktree_args(&parsed, current_dir)
 }
 
 /// Runs the `remove` command with parsed `RemoveArgs`.
-pub fn run_args(args: &RemoveArgs) -> Result<(), RemoveError> {
-    remove_worktree_args(args, None)
+pub fn run_args(args: &RemoveArgs) -> Result<Option<PathBuf>, RemoveError> {
+    let target = remove_worktree_args(args, None)?;
+    if let Some(ref t) = target {
+        println!("{}", t.display());
+    }
+    Ok(target)
 }
 
 /// Runs the `remove` command with CLI arguments.
-pub fn run(args: &[String]) -> Result<(), RemoveError> {
-    remove_worktree(args, None)
+pub fn run(args: &[String]) -> Result<Option<PathBuf>, RemoveError> {
+    let parsed = parse_remove_args(args);
+    let target = remove_worktree_args(&parsed, None)?;
+    if let Some(ref t) = target {
+        println!("{}", t.display());
+    }
+    Ok(target)
 }
 
 #[cfg(test)]

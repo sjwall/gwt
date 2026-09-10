@@ -130,6 +130,7 @@ pub fn switch_worktree_args(
 ) -> Result<PathBuf, SwitchError> {
     let path = find_matching_worktree(&parsed.query, current_dir, config_dir)?;
 
+    crate::shell::notify_cd_target(&path);
     if launch {
         launch_ide(parsed.ide.as_deref(), &path, config_dir)?;
     }
@@ -153,6 +154,7 @@ pub fn switch_worktree(
 pub fn switch_and_print_args(parsed: &SwitchArgs) -> Result<PathBuf, SwitchError> {
     let path = find_matching_worktree(&parsed.query, None, None)?;
     println!("{}", path.display());
+    crate::shell::notify_cd_target(&path);
     launch_ide(parsed.ide.as_deref(), &path, None)?;
     Ok(path)
 }
@@ -165,12 +167,12 @@ pub fn switch_and_print(args: &[String]) -> Result<PathBuf, SwitchError> {
 
 /// Runs the `switch` command with parsed `SwitchArgs`.
 pub fn run_args(args: &SwitchArgs) -> Result<PathBuf, SwitchError> {
-    switch_worktree_args(args, None, None, true)
+    switch_and_print_args(args)
 }
 
 /// Runs the `switch` command with CLI arguments.
 pub fn run(args: &[String]) -> Result<PathBuf, SwitchError> {
-    switch_worktree(args, None, None, true)
+    switch_and_print(args)
 }
 
 #[cfg(test)]

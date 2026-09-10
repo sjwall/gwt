@@ -81,12 +81,16 @@ where
 
     let first_arg = &args[1];
 
-    // Top-level flags for help and version should not be rewritten
+    // Top-level flags for help, version, and shell-wrapper should not be rewritten
     if first_arg == "--help"
         || first_arg == "-h"
         || first_arg == "help"
         || first_arg == "--version"
         || first_arg == "-V"
+        || first_arg == "--shell-wrapper"
+        || first_arg == "--init"
+        || first_arg == "shell-wrapper"
+        || first_arg == "init"
     {
         return args;
     }
@@ -128,6 +132,16 @@ where
 
 fn main() {
     let args = preprocess_cli_args(std::env::args());
+    if args.len() > 1
+        && (args[1] == "--shell-wrapper"
+            || args[1] == "--init"
+            || args[1] == "shell-wrapper"
+            || args[1] == "init")
+    {
+        print!("{}", gwt::shell::SHELL_WRAPPER);
+        return;
+    }
+
     let cli = Cli::parse_from(args);
 
     match &cli.command {
@@ -467,12 +481,16 @@ fn test_preprocess_cli_args() {
         vec!["gwt", "M"]
     );
 
-    // Help and version flags should not be rewritten
+    // Help, version, and shell-wrapper flags should not be rewritten
     assert_eq!(preprocess_cli_args(["gwt", "--help"]), vec!["gwt", "--help"]);
     assert_eq!(preprocess_cli_args(["gwt", "-h"]), vec!["gwt", "-h"]);
     assert_eq!(preprocess_cli_args(["gwt", "help"]), vec!["gwt", "help"]);
     assert_eq!(preprocess_cli_args(["gwt", "--version"]), vec!["gwt", "--version"]);
     assert_eq!(preprocess_cli_args(["gwt", "-V"]), vec!["gwt", "-V"]);
+    assert_eq!(preprocess_cli_args(["gwt", "--shell-wrapper"]), vec!["gwt", "--shell-wrapper"]);
+    assert_eq!(preprocess_cli_args(["gwt", "--init"]), vec!["gwt", "--init"]);
+    assert_eq!(preprocess_cli_args(["gwt", "shell-wrapper"]), vec!["gwt", "shell-wrapper"]);
+    assert_eq!(preprocess_cli_args(["gwt", "init"]), vec!["gwt", "init"]);
 }
 
 #[test]

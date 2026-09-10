@@ -265,6 +265,7 @@ pub fn add_worktree_args<R: io::BufRead>(
     let mut git_cmd = Command::new("git");
     git_cmd.arg("-C").arg(target_repo);
     git_cmd.args(["worktree", "add", dest.to_str().unwrap()]);
+    git_cmd.stdout(std::io::stderr());
 
     let status = git_cmd.status().map_err(|e| AddError::GitWorktreeAdd(e.to_string()))?;
     if !status.success() {
@@ -275,8 +276,11 @@ pub fn add_worktree_args<R: io::BufRead>(
         return Err(AddError::CdWorktree(String::new()));
     }
 
+    crate::shell::notify_cd_target(&dest);
+
     if !parsed.no_install && dest.join("yarn.lock").is_file() {
         let _ = Command::new("yarn")
+            .stdout(std::io::stderr())
             .current_dir(&dest)
             .status();
     }
@@ -312,12 +316,16 @@ pub fn add_worktree<R: io::BufRead>(
 
 /// Runs the `add` command with parsed `AddArgs`.
 pub fn run_args(args: &AddArgs) -> Result<PathBuf, AddError> {
-    add_worktree(&args.args, None, None, true, None::<&mut io::Empty>)
+    let dest = add_worktree(&args.args, None, None, true, None::<&mut io::Empty>)?;
+    println!("{}", dest.display());
+    Ok(dest)
 }
 
 /// Runs the `add` command with CLI arguments.
 pub fn run(args: &[String]) -> Result<PathBuf, AddError> {
-    add_worktree(args, None, None, true, None::<&mut io::Empty>)
+    let dest = add_worktree(args, None, None, true, None::<&mut io::Empty>)?;
+    println!("{}", dest.display());
+    Ok(dest)
 }
 
 #[cfg(test)]

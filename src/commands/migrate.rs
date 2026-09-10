@@ -238,13 +238,13 @@ pub fn migrate_worktrees<R: io::BufRead>(
     }
 
     if to_move.is_empty() {
-        println!("gwt: all worktrees match the expected path pattern");
+        eprintln!("gwt: all worktrees match the expected path pattern");
         return Ok(None);
     }
 
     if dry_run {
         for (src, dest) in &to_move {
-            println!("Would move '{}' to '{}'", src.display(), dest.display());
+            eprintln!("Would move '{}' to '{}'", src.display(), dest.display());
         }
         return Ok(None);
     }
@@ -259,7 +259,7 @@ pub fn migrate_worktrees<R: io::BufRead>(
     let mut fallback_dest: Option<PathBuf> = None;
 
     for (src, dest) in &to_move {
-        println!("Moving '{}' to '{}'...", src.display(), dest.display());
+        eprintln!("Moving '{}' to '{}'...", src.display(), dest.display());
 
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent).map_err(MigrateError::Io)?;
@@ -299,9 +299,11 @@ pub fn migrate_worktrees<R: io::BufRead>(
     }
 
     if let Some(ref target_dir) = new_pwd {
+        crate::shell::notify_cd_target(target_dir);
         if target_dir.is_dir() {
             let _ = std::env::set_current_dir(target_dir);
         } else if let Some(ref fb) = fallback_dest {
+            crate::shell::notify_cd_target(fb);
             if fb.is_dir() {
                 let _ = std::env::set_current_dir(fb);
             }
@@ -314,13 +316,21 @@ pub fn migrate_worktrees<R: io::BufRead>(
 /// Runs the `migrate` command with parsed `MigrateArgs`.
 pub fn run_args(args: &MigrateArgs) -> Result<Option<PathBuf>, MigrateError> {
     let parsed = parse_migrate_args(&args.args)?;
-    migrate_worktrees_args(&parsed, None, None, None::<&mut io::Empty>)
+    let target = migrate_worktrees_args(&parsed, None, None, None::<&mut io::Empty>)?;
+    if let Some(ref t) = target {
+        println!("{}", t.display());
+    }
+    Ok(target)
 }
 
 /// Runs the `migrate` command with raw argument slice.
 pub fn run(args: &[String]) -> Result<Option<PathBuf>, MigrateError> {
     let parsed = parse_migrate_args(args)?;
-    migrate_worktrees_args(&parsed, None, None, None::<&mut io::Empty>)
+    let target = migrate_worktrees_args(&parsed, None, None, None::<&mut io::Empty>)?;
+    if let Some(ref t) = target {
+        println!("{}", t.display());
+    }
+    Ok(target)
 }
 
 #[cfg(test)]

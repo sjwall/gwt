@@ -64,6 +64,24 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `GWT_REPO_URL`: Custom repository clone URL.
 * `GWT_BRANCH`: Git branch to install (default: `main`).
 
+=== Shell Integration (Directory Switching)
+
+Because compiled binaries run in child processes and cannot directly modify the host shell's working directory, a shell wrapper function (`gwt()`) is provided to support directory switching across interactive shells (such as Zsh and Bash) for commands that navigate repositories and worktrees (`cd`, `switch`, `agent`, `main`, `M`, `add`, `pull`, `remove`, and `migrate`).
+
+Add the evaluation line to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
+
+[source,sh]
+----
+eval "$(gwt --shell-wrapper)"
+----
+
+Alternatively, you can source the standalone `_gwt_wrapper` file directly:
+
+[source,sh]
+----
+source /path/to/_gwt_wrapper
+----
+
 == Commands
 
 * `gwt [add] [--ide <ide>] [--agent [<agent>] | -a [<agent>]] [--no-install] <name>`: Create a worktree `../gwt-<dir-name>/<name>`, change directory to it, run `yarn` if `yarn.lock` exists, and launch the configured IDE (defaults to `nvim`) or configured agent. Use `--ide <ide>` to override the IDE for this run only, or `--ide none` to skip launching the IDE. Use `--agent` or `-a` (with or without a named agent, e.g. `--agent <agent>`, `-a <agent>`, `--agent=<agent>`, or `-a=<agent>`) to launch the agent instead of the IDE (supports `--agent none` or `-a none` to suppress launching). Use `--no-install` to skip running `yarn`. If the repository is located in an unsuitable path (e.g. within a hidden directory such as `~/.local`), you will be prompted for a safe parent directory.

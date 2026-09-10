@@ -224,6 +224,7 @@ pub fn cd_worktree(
 pub fn cd_and_print_args(args: &CdArgs) -> Result<PathBuf, CdError> {
     let path = find_matching_worktree(&args.name, None, None)?;
     println!("{}", path.display());
+    crate::shell::notify_cd_target(&path);
     Ok(path)
 }
 
@@ -231,6 +232,7 @@ pub fn cd_and_print_args(args: &CdArgs) -> Result<PathBuf, CdError> {
 pub fn cd_and_print(args: &[String]) -> Result<PathBuf, CdError> {
     let path = cd_worktree(args, None, None)?;
     println!("{}", path.display());
+    crate::shell::notify_cd_target(&path);
     Ok(path)
 }
 

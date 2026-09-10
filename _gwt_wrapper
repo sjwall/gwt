@@ -1,0 +1,57 @@
+# Shell wrapper for gwt (Git WorkTree Helper)
+# Enables changing directory in the host shell for directory-changing commands.
+
+unalias gwt 2>/dev/null || true
+
+gwt() {
+  local gwt_bin="gwt"
+  if ! command -v "$gwt_bin" >/dev/null 2>&1; then
+    if command -v gwt-bin >/dev/null 2>&1; then
+      gwt_bin="gwt-bin"
+    fi
+  fi
+
+  local cd_file
+  cd_file=$(mktemp 2>/dev/null || mktemp -t gwt_cd 2>/dev/null)
+
+  if [ -n "$cd_file" ]; then
+    GWT_CD_FILE="$cd_file" command "$gwt_bin" "$@"
+    local ret=$?
+    if [ -s "$cd_file" ]; then
+      local target
+      target=$(cat "$cd_file")
+      rm -f "$cd_file"
+      if [ $ret -eq 0 ] && [ -n "$target" ]; then
+        if [ -d "$target" ]; then
+          builtin cd "$target" || return 14
+        else
+          return 14
+        fi
+      fi
+    else
+      rm -f "$cd_file"
+    fi
+    return $ret
+  else
+    case "$1" in
+      cd|switch|s|main|m|M|Main|agent|a|add|pull|p|remove|rm|migrate)
+        local target
+        target=$(command "$gwt_bin" "$@") || return $?
+        if [ -n "$target" ] && [ -d "$target" ]; then
+          builtin cd "$target" || return 14
+        fi
+        ;;
+      *)
+        if [ $# -gt 0 ] && [ "${1#-}" = "$1" ] && [ "$1" != "list" ] && [ "$1" != "ls" ] && [ "$1" != "track" ] && [ "$1" != "t" ] && [ "$1" != "config" ] && [ "$1" != "ide" ] && [ "$1" != "skills" ] && [ "$1" != "help" ]; then
+          local target
+          target=$(command "$gwt_bin" "$@") || return $?
+          if [ -n "$target" ] && [ -d "$target" ]; then
+            builtin cd "$target" || return 14
+          fi
+        else
+          command "$gwt_bin" "$@"
+        fi
+        ;;
+    esac
+  fi
+}

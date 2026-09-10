@@ -6,6 +6,7 @@ use gwt::commands::config::ConfigArgs;
 use gwt::commands::ide::IdeArgs;
 use gwt::commands::list::ListArgs;
 use gwt::commands::main::{MainArgs, MainIdeArgs};
+use gwt::commands::migrate::MigrateArgs;
 use gwt::commands::pull::PullArgs;
 use gwt::commands::remove::RemoveArgs;
 use gwt::commands::skills::SkillsArgs;
@@ -52,6 +53,8 @@ enum Commands {
     /// Switch directory to the main repository and launch configured IDE
     #[command(name = "M", alias = "Main")]
     MainIde(MainIdeArgs),
+    /// Migrate worktrees to match expected path pattern
+    Migrate(MigrateArgs),
     /// View or set configuration options
     Config(ConfigArgs),
     /// Get or set configured IDE (defaults to nvim)
@@ -194,6 +197,12 @@ fn main() {
                 std::process::exit(err.exit_code());
             }
         }
+        Commands::Migrate(args) => {
+            if let Err(err) = gwt::commands::migrate::run_args(args) {
+                eprintln!("gwt: {err}");
+                std::process::exit(err.exit_code());
+            }
+        }
         Commands::Config(args) => {
             if let Err(err) = gwt::commands::config::run_args(args) {
                 eprintln!("gwt: {err}");
@@ -262,6 +271,33 @@ fn test_cli_skills_parsing() {
             assert!(args.sync);
         }
         _ => panic!("expected Skills command"),
+    }
+}
+
+#[test]
+fn test_cli_migrate_parsing() {
+    let cli = Cli::try_parse_from(["gwt", "migrate"]).unwrap();
+    match cli.command {
+        Commands::Migrate(args) => assert!(args.args.is_empty()),
+        _ => panic!("expected Migrate command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "migrate", "-n"]).unwrap();
+    match cli.command {
+        Commands::Migrate(args) => assert_eq!(args.args, vec!["-n"]),
+        _ => panic!("expected Migrate command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "migrate", "--dry-run", "--force"]).unwrap();
+    match cli.command {
+        Commands::Migrate(args) => assert_eq!(args.args, vec!["--dry-run", "--force"]),
+        _ => panic!("expected Migrate command"),
+    }
+
+    let cli = Cli::try_parse_from(["gwt", "migrate", "-force"]).unwrap();
+    match cli.command {
+        Commands::Migrate(args) => assert_eq!(args.args, vec!["-force"]),
+        _ => panic!("expected Migrate command"),
     }
 }
 

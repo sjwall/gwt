@@ -1,6 +1,6 @@
 #!/bin/zsh
 _gwt_migrate() {
-  source "$gwt_dir/utils/dir-gwt.sh"
+  source "$gwt_dir/utils/gwt-dir-get.sh"
   local dry_run=0
   local force_flag=""
   local args=()

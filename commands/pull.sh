@@ -1,6 +1,6 @@
 #!/bin/zsh
 _gwt_pull() {
-  source "$gwt_dir/utils/dir-gwt.sh"
+  source "$gwt_dir/utils/gwt-dir-get.sh"
   source "$gwt_dir/utils/ide-init.sh"
   local override_ide=""
   local skip_install=0

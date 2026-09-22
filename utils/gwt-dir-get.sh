@@ -1,8 +1,8 @@
 #!/bin/zsh
 _gwt_get_dir_gwt() {
-  source "$gwt_dir/utils/parent-get.sh"
-  source "$gwt_dir/utils/path-check.sh"
-  source "$gwt_dir/utils/parent-save.sh"
+  source "$gwt_dir/utils/configured-parent-get.sh"
+  source "$gwt_dir/utils/path-unsuitable-check.sh"
+  source "$gwt_dir/utils/configured-parent-save.sh"
   local target_repo="${main_repo:-$PWD}"
   local safe_parent
   safe_parent=$(_gwt_get_configured_parent "$target_repo")

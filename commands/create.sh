@@ -1,6 +1,6 @@
 #!/bin/zsh
 _gwt_create() {
-  source "$gwt_dir/utils/dir-gwt.sh"
+  source "$gwt_dir/utils/gwt-dir-get.sh"
   source "$gwt_dir/utils/ide-launch.sh"
   source "$gwt_dir/utils/agent-launch.sh"
   local override_ide=""

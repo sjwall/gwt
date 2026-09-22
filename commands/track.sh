@@ -3,6 +3,7 @@ _gwt_track() {
   local target_repo=""
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
   local repos_file="$config_dir/repos"
+  local lockfile="$config_dir/repos.lock"
 
   if [[ $# -eq 0 ]]; then
     if [[ -z "$main_repo" ]]; then
@@ -26,10 +27,15 @@ _gwt_track() {
     return 37
   fi
 
+  source "${0:A:h:h}/utils/file-lock.sh"
+  _gwt_acquire_lock "$lockfile" || return 1
+  
   mkdir -p "$config_dir"
   if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$target_repo" "$repos_file" 2>/dev/null; then
     echo "$target_repo" >> "$repos_file"
   fi
   echo "$target_repo"
+  
+  _gwt_release_lock "$lockfile"
   return 0
 }

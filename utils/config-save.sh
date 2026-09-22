@@ -1,9 +1,15 @@
 #!/bin/zsh
+source "${0:A:h:h}/file-lock.sh"
+
 _gwt_save_config() {
   local target_key="$1"
   local target_val="$2"
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
   local config_file="$config_dir/config"
+  local lockfile="$config_dir/config.lock"
+  
+  _gwt_acquire_lock "$lockfile" || return 1
+  
   mkdir -p "$config_dir"
   if [[ -f "$config_file" ]]; then
     local temp_file="${config_file}.tmp.$$"
@@ -28,4 +34,6 @@ _gwt_save_config() {
   else
     echo "$target_key=$target_val" >> "$config_file"
   fi
+  
+  _gwt_release_lock "$lockfile"
 }

@@ -88,10 +88,17 @@ gwt() {
   if [[ -n "$main_repo" ]]; then
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
     local repos_file="$config_dir/repos"
+    local lockfile="$config_dir/repos.lock"
+    
+    source "$gwt_dir/utils/file-lock.sh"
+    _gwt_acquire_lock "$lockfile" || return 1
+    
     mkdir -p "$config_dir"
     if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$main_repo" "$repos_file" 2>/dev/null; then
       echo "$main_repo" >> "$repos_file"
     fi
+    
+    _gwt_release_lock "$lockfile"
   fi
 
   {

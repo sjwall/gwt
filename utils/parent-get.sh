@@ -14,6 +14,10 @@ _gwt_get_configured_parent() {
           key="${line%%=*}"
           val="${line#*=}"
           if [[ "$key" == "$repo" ]]; then
+            if _gwt_is_unsuitable_path "$val"; then
+              echo "gwt: configured parent path is unsuitable ($val)" >&2
+              return 1
+            fi
             echo "$val"
             return 0
           fi

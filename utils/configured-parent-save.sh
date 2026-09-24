@@ -1,5 +1,5 @@
 #!/bin/zsh
-source "${0:A:h:h}/file-lock.sh"
+source "$gwt_dir/utils/file-lock.sh"
 
 _gwt_save_configured_parent() {
   local repo="$1"
@@ -7,9 +7,9 @@ _gwt_save_configured_parent() {
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
   local locations_file="$config_dir/locations"
   local lockfile="$config_dir/locations.lock"
-  
+
   _gwt_acquire_lock "$lockfile" || return 1
-  
+
   mkdir -p "$config_dir"
   if [[ -f "$locations_file" ]]; then
     local temp_file="${locations_file}.tmp.$$"
@@ -33,6 +33,6 @@ _gwt_save_configured_parent() {
   else
     echo "$repo=$safe_parent" >> "$locations_file"
   fi
-  
+
   _gwt_release_lock "$lockfile"
 }

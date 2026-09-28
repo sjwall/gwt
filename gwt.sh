@@ -177,14 +177,15 @@ gwt() {
         source "$gwt_dir/commands/track.sh"
         _gwt_track "$@"
         ;;
-      add)
-        source "$gwt_dir/commands/create.sh"
-        _gwt_create "$@"
-        ;;
-      *)
-        source "$gwt_dir/commands/create.sh"
-        _gwt_create "$@"
-        ;;
+       add)
+         shift
+         source "$gwt_dir/commands/create.sh"
+         _gwt_create "$@"
+         ;;
+       *)
+         source "$gwt_dir/commands/create.sh"
+         _gwt_create "$@"
+         ;;
     esac
   } always {
     unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate 2>/dev/null

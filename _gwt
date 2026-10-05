@@ -195,6 +195,7 @@ _gwt() {
     'rm:Alias for remove'
     'track:Track a git repository'
     't:Alias for track'
+    'clone:Clone a repository with git clone and track it'
     'config:Get or set configuration options'
     'ide:Get or set configured IDE'
     'skills:Manage agent skill symlinks'

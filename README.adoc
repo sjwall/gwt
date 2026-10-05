@@ -76,6 +76,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `gwt ls [<name>]` / `gwt list [<name>]`: List tracked worktrees (optionally filtered by repository `<name>`).
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
 * `gwt track [<path>]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository).
+* `gwt clone [--ide <ide>] [--agent [<agent>] | -a [<agent>]] [--no-install] [git clone args...]`: Clone a repository using `git clone` with the provided arguments and automatically track it. Supports the same IDE/agent options as `add` (e.g. `gwt clone https://github.com/user/repo.git`, `gwt clone --ide code https://github.com/user/repo.git mydir`).
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
 * `gwt skills [<targets>]`: Manage global agent skill symlinks (e.g. `gwt skills claude,gemini`, `gwt skills all`, `gwt skills none`, or `gwt skills list`). When run without arguments in an interactive terminal, prompts to select which agents to link (showing currently linked agents as default). Supports `-n` / `--dry-run` to preview changes.
 * `gwt migrate [-n|--dry-run]`: Check where all worktrees are located for the current repository and move any that don't match the expected path pattern (`../gwt-<dir-name>/<name>` or configured safe parent). Supports `-n` / `--dry-run` to preview changes without moving.
@@ -91,7 +92,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 
 `gwt` includes built-in Zsh autocompletion support. When `gwt.sh` is sourced or `_gwt` is present in your `$fpath`, pressing `<TAB>` will automatically suggest:
 
-* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `config`, `ide`, `skills`, `migrate`, `upgrade`)
+* Subcommands (`add`, `pull`, `p`, `cd`, `main`, `m`, `M`, `switch`, `s`, `agent`, `a`, `ls`, `list`, `remove`, `rm`, `track`, `t`, `clone`, `config`, `ide`, `skills`, `migrate`, `upgrade`)
 * Worktree names and paths for `gwt cd`, `gwt switch`, `gwt agent`, and `gwt remove`
 * Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`

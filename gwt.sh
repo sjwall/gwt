@@ -19,6 +19,7 @@
 #  gwt rm -f [NAME]            as above
 #  gwt track [PATH]            track git repository (defaults to current repository)
 #  gwt t [PATH]                as above
+#  gwt clone [args...]         clone a repository with git clone and track it
 #  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
 #  gwt ide [NAME]              get or set configured IDE (defaults to nvim)
 #  gwt skills [TARGETS]        manage agent skill symlinks (e.g. gwt skills claude,gemini)
@@ -65,19 +66,23 @@
 #   36 - track: not inside a git repository and no repository specified
 #   37 - track: invalid argument count (more than 1 argument provided)
 #   38 - track: specified path is not a git repository
-#   39 - list: invalid argument count (more than 1 repository specified)
-#   40 - list: multiple exact repository matches found
-#   41 - list: multiple repository name matches found
-#   42 - list: multiple repository path matches found
-#   43 - list: no matching repository found for query
-#   44 - agent: --agent option requires an argument
-#   45 - agent: invalid argument count (expected exactly 1 worktree name)
-#   46 - agent: no agent configured
-#   47 - skills: skills helper not found
-#   48 - migrate: not inside a git repository
-#   49 - migrate: unknown argument
-#   50 - migrate: failed to determine target worktree directory location
-#   51 - migrate: git worktree move failed
+#   39 - clone: invalid argument count (no arguments provided)
+#   40 - clone: git clone command failed
+#   41 - clone: could not determine cloned repository path
+#   42 - clone: cloned path is not a git repository
+#   43 - list: invalid argument count (more than 1 repository specified)
+#   44 - list: multiple exact repository matches found
+#   45 - list: multiple repository name matches found
+#   46 - list: multiple repository path matches found
+#   47 - list: no matching repository found for query
+#   48 - agent: --agent option requires an argument
+#   49 - agent: invalid argument count (expected exactly 1 worktree name)
+#   50 - agent: no agent configured
+#   51 - skills: skills helper not found
+#   52 - migrate: not inside a git repository
+#   53 - migrate: unknown argument
+#   54 - migrate: failed to determine target worktree directory location
+#   55 - migrate: git worktree move failed
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   # TODO: Detect this
@@ -177,6 +182,11 @@ gwt() {
         source "$gwt_dir/commands/track.sh"
         _gwt_track "$@"
         ;;
+      clone)
+        shift
+        source "$gwt_dir/commands/clone.sh"
+        _gwt_clone "$@"
+        ;;
        add)
          shift
          source "$gwt_dir/commands/create.sh"
@@ -188,7 +198,7 @@ gwt() {
          ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone 2>/dev/null
   }
 }
 

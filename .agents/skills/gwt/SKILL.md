@@ -1,7 +1,7 @@
 ---
 name: gwt
 description: >-
-  Manage git worktrees and repositories using the gwt helper tool without launching an interactive IDE or editor. Use this skill whenever creating, pulling, switching, listing, or removing git worktrees in repositories managed by gwt.
+  Manage git worktrees and repositories using the gwt helper tool without launching an interactive IDE or editor. Use this skill whenever creating, pulling, switching, listing, removing git worktrees, or cloning repositories managed by gwt.
 ---
 
 # `gwt` Worktree Helper Skill
@@ -14,14 +14,16 @@ When running as an automated agent, **always suppress the IDE launch** using `--
 
 ## Key Rule: Headless Execution
 
-Whenever executing commands that launch an IDE by default (`add`, `pull`, `switch`, `M`), you **must** supply `--ide none` or set `GWT_IDE=none`.
+Whenever executing commands that launch an IDE by default (`add`, `pull`, `switch`, `M`, `clone`), you **must** supply `--ide none` or set `GWT_IDE=none`.
 
 ```bash
 # Preferred CLI flag:
 gwt add --ide none <branch-name>
+gwt clone --ide none <repository-url>
 
 # Or via environment variable:
 GWT_IDE=none gwt add <branch-name>
+GWT_IDE=none gwt clone <repository-url>
 ```
 
 Similarly, commands that launch an agent (`agent`, `a`, or `add` with `--agent` / `-a`) can be suppressed using `--agent none`, `-a none`, or the `GWT_AGENT=none` environment variable:
@@ -172,7 +174,32 @@ gwt track /path/to/repo
 gwt t /path/to/repo
 ```
 
-### 9. Configuration Management
+### 9. Clone a Repository
+Clones a repository using `git clone` with the provided arguments and automatically tracks it. Supports the same IDE/agent options as other commands.
+
+```bash
+# Basic clone (automatically tracks the repository):
+gwt clone https://github.com/user/repo.git
+
+# Clone with custom directory name:
+gwt clone https://github.com/user/repo.git myrepo
+
+# Clone and suppress IDE launch (for headless execution):
+gwt clone --ide none https://github.com/user/repo.git
+
+# Clone with git options:
+gwt clone --depth 1 https://github.com/user/repo.git
+
+# Clone and skip dependency installation:
+gwt clone --no-install https://github.com/user/repo.git
+
+# Clone and launch a specific agent:
+gwt clone --agent cursor https://github.com/user/repo.git
+# or shorthand:
+gwt clone -a cursor https://github.com/user/repo.git
+```
+
+### 10. Configuration Management
 Inspect, set, or remove configuration options:
 
 ```bash
@@ -194,7 +221,7 @@ gwt config unset <key>
 gwt config rm <key>
 ```
 
-### 10. Migrate Worktrees to Expected Path Pattern
+### 11. Migrate Worktrees to Expected Path Pattern
 Checks where all worktrees are located for the current repository and moves any worktrees that don't match the expected path pattern (`../gwt-<repo>/<name>` or configured safe parent location). Supports `--dry-run` / `-n` to preview moves without moving them.
 
 ```bash
@@ -207,7 +234,7 @@ gwt migrate -n
 gwt migrate
 ```
 
-### 11. Upgrade `gwt`
+### 12. Upgrade `gwt`
 Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 
 ```bash
@@ -284,16 +311,20 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `36` | `track` | Not inside a git repository and no repository specified. |
 | `37` | `track` | Invalid argument count (more than 1 argument provided). |
 | `38` | `track` | Specified path is not a git repository. |
-| `39` | `list` | Invalid argument count (more than 1 repository specified). |
-| `40` | `list` | Multiple exact repository matches found. |
-| `41` | `list` | Multiple repository name matches found. |
-| `42` | `list` | Multiple repository path matches found. |
-| `43` | `list` | No matching repository found for query. |
-| `44` | `agent` | Missing required argument for `--agent` option. |
-| `45` | `agent` | Invalid argument count (expected exactly 1 worktree name). |
-| `46` | `agent` | No agent configured. |
-| `47` | `skills` | Skills helper script not found. |
-| `48` | `migrate` | Not inside a git repository. |
-| `49` | `migrate` | Unknown argument or option. |
-| `50` | `migrate` | Failed to determine target worktree directory location. |
-| `51` | `migrate` | `git worktree move` command failed. |
+| `39` | `clone` | Invalid argument count (no arguments provided). |
+| `40` | `clone` | `git clone` command failed. |
+| `41` | `clone` | Could not determine cloned repository path. |
+| `42` | `clone` | Cloned path is not a git repository. |
+| `43` | `list` | Invalid argument count (more than 1 repository specified). |
+| `44` | `list` | Multiple exact repository matches found. |
+| `45` | `list` | Multiple repository name matches found. |
+| `46` | `list` | Multiple repository path matches found. |
+| `47` | `list` | No matching repository found for query. |
+| `48` | `agent` | Missing required argument for `--agent` option. |
+| `49` | `agent` | Invalid argument count (expected exactly 1 worktree name). |
+| `50` | `agent` | No agent configured. |
+| `51` | `skills` | Skills helper script not found. |
+| `52` | `migrate` | Not inside a git repository. |
+| `53` | `migrate` | Unknown argument or option. |
+| `54` | `migrate` | Failed to determine target worktree directory location. |
+| `55` | `migrate` | `git worktree move` command failed. |

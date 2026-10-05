@@ -83,7 +83,7 @@ _gwt_clone() {
   # Find the newly cloned repository by looking for the newest .git directory
   local repo_path=""
   local newest_time=0
-  
+
   # Check if the last argument was a directory that now exists and is a git repo
   local last_arg="${git_args[-1]}"
   if [[ -d "$last_arg" && -d "$last_arg/.git" ]]; then
@@ -92,7 +92,14 @@ _gwt_clone() {
     # Look for the newest .git directory in the current directory
     for dir in *(N); do
       if [[ -d "$dir/.git" ]]; then
-        local dir_time=$(stat -c %Y "$dir")
+        local dir_time
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS: use -f format with %m (time of last modification)
+            dir_time=$(stat -f %m "$dir")
+        else
+            # Linux: use -c format with %Y (time of last modification, seconds since epoch)
+            dir_time=$(stat -c %Y "$dir")
+        fi
         if (( dir_time > newest_time )); then
           newest_time=$dir_time
           repo_path="$dir"

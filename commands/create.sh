@@ -90,9 +90,8 @@ _gwt_create() {
   git worktree add "$dest" || return 27
   cd "$dest" || return 28
   if [[ "$skip_install" -eq 0 ]]; then
-    if [ -f yarn.lock ]; then
-      yarn
-    fi
+    source "$gwt_dir/utils/pull-dependencies.sh"
+    _gwt_pull_dependencies
   fi
   if [[ $use_agent -eq 1 ]]; then
     _gwt_launch_agent "$override_agent"

@@ -94,15 +94,15 @@ gwt() {
     local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
     local repos_file="$config_dir/repos"
     local lockfile="$config_dir/repos.lock"
-    
+
     source "$gwt_dir/utils/file-lock.sh"
     _gwt_acquire_lock "$lockfile" || return 1
-    
+
     mkdir -p "$config_dir"
     if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$main_repo" "$repos_file" 2>/dev/null; then
       echo "$main_repo" >> "$repos_file"
     fi
-    
+
     _gwt_release_lock "$lockfile"
   fi
 
@@ -198,7 +198,7 @@ gwt() {
          ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies 2>/dev/null
   }
 }
 

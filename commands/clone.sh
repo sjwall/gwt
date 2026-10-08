@@ -161,9 +161,9 @@ _gwt_clone() {
   # Change to the cloned repository
   cd "$repo_path" || return 1
 
-  # Run yarn if yarn.lock exists and --no-install was not specified
-  if [[ "$skip_install" -eq 0 && -f "yarn.lock" ]]; then
-    yarn
+  if [[ "$skip_install" -eq 0 ]]; then
+    source "$gwt_dir/utils/pull-dependencies.sh"
+    _gwt_pull_dependencies
   fi
 
   # Launch IDE or agent if specified

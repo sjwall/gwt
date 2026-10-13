@@ -25,6 +25,7 @@
 #  gwt skills [TARGETS]        manage agent skill symlinks (e.g. gwt skills claude,gemini)
 #  gwt migrate [--dry-run]     migrate worktrees to expected path pattern
 #  gwt upgrade                 upgrade gwt repository (git pull)
+#  gwt devcon                  setup the current repository for working with devcontainers and gwt
 #
 # Exit Codes:
 #   0  - Success
@@ -83,6 +84,8 @@
 #   53 - migrate: unknown argument
 #   54 - migrate: failed to determine target worktree directory location
 #   55 - migrate: git worktree move failed
+#   56 - devcon: not inside a git repository
+#   57 - devcon: devcontainer.json file not found
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   # TODO: Detect this
@@ -187,6 +190,10 @@ gwt() {
         source "$gwt_dir/commands/clone.sh"
         _gwt_clone "$@"
         ;;
+       devcon)
+        source "$gwt_dir/commands/devcon.sh"
+        _gwt_devcon "$@"
+        ;;
        add)
          shift
          source "$gwt_dir/commands/create.sh"
@@ -198,7 +205,7 @@ gwt() {
          ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies _gwt_devcon _gwt_jq_inplace 2>/dev/null
   }
 }
 

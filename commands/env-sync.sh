@@ -31,7 +31,12 @@ _gwt_env_sync() {
     echo "Copying files:"
     for (( i = 1; i <= ${#env_list[@]}; i++ )); do
       echo "${env_list[i]}" >&2
-      cp "$main_repo/${env_list[i]}" "$PWD/${env_list[i]}"
+      local item="$main_repo/${env_list[i]}"
+      if [[ -f "$item" ]]; then
+        cp "$item" "$PWD/${env_list[i]}"
+      else
+        echo "gwt: WARN unable to copy env ${env_list[i]}"
+      fi
     done
   else
     echo "gwt: no env configured for $repo_name"

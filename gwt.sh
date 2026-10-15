@@ -191,6 +191,7 @@ gwt() {
         _gwt_clone "$@"
         ;;
        devcon)
+        shift
         source "$gwt_dir/commands/devcon.sh"
         _gwt_devcon "$@"
         ;;

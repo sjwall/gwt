@@ -241,6 +241,33 @@ Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 gwt upgrade
 ```
 
+### 13. Manage Environment Files
+Manage environment files for worktrees. Environment files are tracked configuration files (like `.env`, `.env.local`, etc.) that can be synced from the main repository to worktrees.
+
+```bash
+# Add an environment file to track (from current worktree):
+gwt env add .env
+
+# Add an environment file to user config (overrides local):
+gwt env add -u .env
+
+# List tracked environment files:
+gwt env list
+gwt env ls
+
+# Sync environment files from main repo to current worktree:
+gwt env sync
+
+# Remove a specific environment file from tracking:
+gwt env remove .env
+
+# Remove all environment files from tracking:
+gwt env remove
+
+# Remove from user config:
+gwt env remove -u .env
+```
+
 ---
 
 ## Configuration & Storage Locations
@@ -329,4 +356,5 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `54` | `migrate` | Failed to determine target worktree directory location. |
 | `55` | `migrate` | `git worktree move` command failed. |
 | `56` | `devcon` | Not inside a git repository.
-| `57` | `devcon` | devcontainer.json file not found.
+| `57` | `devcon` | devcontainer.json file not found. |
+| `58` | `env` | Not inside a git repository.

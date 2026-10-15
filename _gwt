@@ -38,6 +38,7 @@ _gwt() {
     'migrate:Migrate worktrees to match expected path pattern'
     'upgrade:Upgrade gwt repository'
     'devcon:Configure the current repository to work with devcontainers and gwt'
+    'env:Manage environment files for worktrees'
   )
 
   # Source IDE completion utility
@@ -133,6 +134,11 @@ _gwt() {
         upgrade)
           ;;
         devcon)
+          ;;
+        env)
+          _arguments \
+            '1:subcommand:(add list ls sync remove rm)' \
+            '2:environment file:_files' && return 0
           ;;
         clone)
           source "$gwt_dir/commands/_clone.sh"

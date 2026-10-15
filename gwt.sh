@@ -26,6 +26,7 @@
 #  gwt migrate [--dry-run]     migrate worktrees to expected path pattern
 #  gwt upgrade                 upgrade gwt repository (git pull)
 #  gwt devcon                  setup the current repository for working with devcontainers and gwt
+#  gwt env [add|list|ls|sync|remove|rm]  manage environment files for worktrees
 #
 # Exit Codes:
 #   0  - Success

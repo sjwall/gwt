@@ -82,6 +82,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `gwt migrate [-n|--dry-run]`: Check where all worktrees are located for the current repository and move any that don't match the expected path pattern (`../gwt-<dir-name>/<name>` or configured safe parent). Supports `-n` / `--dry-run` to preview changes without moving.
 * `gwt devcon`: Configure the current repository to work with devcontainers and gwt.
 * `gwt upgrade`: Upgrade the gwt repository (`git pull`, reload `gwt.sh`, and update symlinks for detected linked skills).
+* `gwt env [add|list|ls|sync|remove|rm]`: Manage environment files for worktrees (add environment files to track, list tracked files, sync files from main repo to worktree, or remove tracked files).
 
 == Configuration
 
@@ -110,6 +111,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 ** `migrate`
 ** `upgrade`
 ** `devcon`
+** `env`
 * Worktree names and paths for `gwt cd`, `gwt switch`, `gwt agent`, and `gwt remove`
 * Tracked repository names and paths for `gwt main` and `gwt M`
 * Remote branches from `origin` for `gwt pull`

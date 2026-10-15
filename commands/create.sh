@@ -89,6 +89,10 @@ _gwt_create() {
   local dest="$dir_gwt/$branch"
   git worktree add "$dest" || return 27
   cd "$dest" || return 28
+  # Sync environment files if available
+  source "$gwt_dir/commands/env-sync.sh"
+  _gwt_env_sync
+  unfunction _gwt_env_sync 2>/dev/null
   if [[ "$skip_install" -eq 0 ]]; then
     source "$gwt_dir/utils/pull-dependencies.sh"
     _gwt_pull_dependencies

@@ -86,6 +86,7 @@
 #   55 - migrate: git worktree move failed
 #   56 - devcon: not inside a git repository
 #   57 - devcon: devcontainer.json file not found
+#   58 - env: not inside a git repository
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   # TODO: Detect this
@@ -195,6 +196,11 @@ gwt() {
         source "$gwt_dir/commands/devcon.sh"
         _gwt_devcon "$@"
         ;;
+       env)
+        shift
+        source "$gwt_dir/commands/env.sh"
+        _gwt_env "$@"
+        ;;
       add)
         shift
         source "$gwt_dir/commands/create.sh"
@@ -206,7 +212,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies _gwt_devcon _gwt_jq_inplace 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies _gwt_devcon _gwt_jq_inplace _gwt_env 2>/dev/null
   }
 }
 

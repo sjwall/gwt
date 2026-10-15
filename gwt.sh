@@ -181,6 +181,9 @@ gwt() {
         source "$gwt_dir/commands/upgrade.sh"
         _gwt_upgrade "$@"
         ;;
+      reload)
+        source "$gwt_dir/gwt.sh"
+        ;;
       track|t)
         shift
         source "$gwt_dir/commands/track.sh"

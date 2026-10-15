@@ -5,7 +5,8 @@
 # ------------------------------------------------------------------------------
 
 # Determine the directory where this completion file is located
-local gwt_dir="${${(%):-%x}:A:h}"
+# TODO: Detect this
+local gwt_dir="$HOME/.local/share/gwt"
 
 _gwt() {
   (( $+functions[_arguments] )) || return 0

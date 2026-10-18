@@ -10,6 +10,8 @@ A lightweight CLI tool to simplify creating, switching, and managing Git worktre
 - **`./install.sh`**: POSIX shell installation and upgrade script.
 - **`./README.adoc`**: Project documentation, command reference, configuration paths, and exit codes.
 - **`./.agents/skills/gwt`**: Skill for agents using this tool.
+- **`./commands/`**: The source for each command and any autocompletion.
+- **`./utils/`**: Shared utilities across all commands.
 
 ## Key Conventions & Agent Guidelines
 

@@ -18,12 +18,18 @@ _gwt_env_sync() {
     env_file="$config_dir/$repo_name"
   fi
 
+  $source=$main_repo
+  if [[ -n "$1" ]]; then
+    echo "gwt: using source dir $source"
+    $source=$1
+  fi
+
   if [[ -f "$env_file" ]]; then
     local env_list=()
     local -A seen
     local r
     while IFS= read -r r || [[ -n "$r" ]]; do
-      [[ -z "$r" || ! -f "$main_repo/$r" ]] && continue
+      [[ -z "$r" || ! -f "$source/$r" ]] && continue
       [[ -n "${seen[$r]}" ]] && continue
       seen[$r]=1
       env_list+=("$r")
@@ -31,7 +37,7 @@ _gwt_env_sync() {
     echo "Copying files:"
     for (( i = 1; i <= ${#env_list[@]}; i++ )); do
       echo "${env_list[i]}" >&2
-      local item="$main_repo/${env_list[i]}"
+      local item="$source/${env_list[i]}"
       if [[ -f "$item" ]]; then
         cp "$item" "$PWD/${env_list[i]}"
       else

@@ -258,6 +258,9 @@ gwt env ls
 # Sync environment files from main repo to current worktree:
 gwt env sync
 
+# Sync environment files from another directory to current worktree:
+gwt env sync ~/a/path
+
 # Remove a specific environment file from tracking:
 gwt env remove .env
 

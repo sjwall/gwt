@@ -63,4 +63,5 @@ _gwt_remove() {
   else
     git branch -d "$branch_name"
   fi
+  echo "$main_repo"
 }

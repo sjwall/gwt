@@ -83,6 +83,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `gwt devcon`: Configure the current repository to work with devcontainers and gwt.
 * `gwt upgrade`: Upgrade the gwt repository (`git pull`, reload `gwt.sh`, and update symlinks for detected linked skills).
 * `gwt env [add|list|ls|sync|remove|rm]`: Manage environment files for worktrees (add environment files to track, list tracked files, sync files from main repo (or other location) to worktree, or remove tracked files).
+* `get prune [--dry-run]`: clean the list used to track repos of repos which don't exist any more.
 
 == Configuration
 

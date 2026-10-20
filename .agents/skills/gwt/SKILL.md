@@ -275,7 +275,7 @@ gwt env remove -u .env
 
 ## Configuration & Storage Locations
 
-* **Tracked repositories**: `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`
+* **Tracked repositories**: `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`, can be cleaned with `gwt prune`
 * **Custom worktree parent locations**: `${XDG_CONFIG_HOME:-~/.config}/gwt/locations`
 * **Configuration settings**: `${XDG_CONFIG_HOME:-~/.config}/gwt/config`
 

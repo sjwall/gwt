@@ -200,10 +200,15 @@ gwt() {
         source "$gwt_dir/commands/devcon.sh"
         _gwt_devcon "$@"
         ;;
-       env)
+      env)
         shift
         source "$gwt_dir/commands/env.sh"
         _gwt_env "$@"
+        ;;
+      prune)
+        shift
+        source "$gwt_dir/commands/prune.sh"
+        _gwt_prune "$@"
         ;;
       add)
         shift
@@ -216,7 +221,7 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies _gwt_devcon _gwt_jq_inplace _gwt_env 2>/dev/null
+    unfunction _gwt_remove _gwt_pull _gwt_create _gwt_init_ide _gwt_launch_ide _gwt_cd _gwt_main _gwt_main_ide _gwt_switch _gwt_agent _gwt_launch_agent _gwt_get_agent _gwt_ls _gwt_find_worktrees _gwt_is_unsuitable_path _gwt_get_configured_parent _gwt_save_configured_parent _gwt_get_dir_gwt _gwt_get_config _gwt_save_config _gwt_unset_config _gwt_get_ide _gwt_config _gwt_upgrade _gwt_track _gwt_skills _gwt_migrate _gwt_clone _gwt_pull_dependencies _gwt_devcon _gwt_jq_inplace _gwt_env _gwt_prune 2>/dev/null
   }
 }
 

@@ -17,7 +17,9 @@ _gwt_remove() {
   done
 
   if [[ -z "$main_repo" ]]; then
+    local branch_name=$(git rev-parse --abbrev-ref HEAD)
     git worktree remove "${flags[@]}" "${targets[@]}"
+    git branch -d "$branch_name"
     return $?
   fi
 
@@ -48,6 +50,7 @@ _gwt_remove() {
   fi
 
   local orig_pwd="$PWD"
+  local branch_name=$(git rev-parse --abbrev-ref HEAD)
   if [[ $is_linked_worktree -eq 1 ]] || [[ "$PWD" != "$main_repo" ]]; then
     cd "$main_repo" || return 14
   fi
@@ -57,5 +60,7 @@ _gwt_remove() {
       cd "$orig_pwd" 2>/dev/null
     fi
     return 15
+  else
+    git branch -d "$branch_name"
   fi
 }

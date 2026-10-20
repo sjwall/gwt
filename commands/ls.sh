@@ -41,6 +41,7 @@ _gwt_ls() {
       seen[$repo]=1
       git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
       git -C "$repo" worktree list "${flags[@]}"
+      echo "----------"
     done
     return 0
   elif [[ ${#args[@]} -gt 1 ]]; then
@@ -104,5 +105,6 @@ _gwt_ls() {
 
   for repo in "${target_repos[@]}"; do
     git -C "$repo" worktree list "${flags[@]}"
+    echo "----------"
   done
 }

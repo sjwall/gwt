@@ -30,12 +30,14 @@ _gwt_track() {
   source "$gwt_dir/utils/file-lock.sh"
   _gwt_acquire_lock "$lockfile" || return 1
 
-  mkdir -p "$config_dir"
-  if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$target_repo" "$repos_file" 2>/dev/null; then
-    echo "$target_repo" >> "$repos_file"
-  fi
-  echo "$target_repo"
-
-  _gwt_release_lock "$lockfile"
+  {
+    mkdir -p "$config_dir"
+    if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$target_repo" "$repos_file" 2>/dev/null; then
+      echo "$target_repo" >> "$repos_file"
+    fi
+    echo "$target_repo"
+  } always {
+    _gwt_release_lock "$lockfile"
+  }
   return 0
 }

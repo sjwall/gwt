@@ -15,13 +15,15 @@ _gwt_env_add() {
   source "$gwt_dir/utils/file-lock.sh"
   _gwt_acquire_lock "$lockfile" || return 1
 
-  echo $env_file
-  if [[ ! -f "$env_file" ]]; then
-    mkdir -p -- "${env_file:h}"
-  fi
+  {
+    echo $env_file
+    if [[ ! -f "$env_file" ]]; then
+      mkdir -p -- "${env_file:h}"
+    fi
 
-  echo "$1" >> "$env_file"
-
-  _gwt_release_lock "$lockfile"
+    echo "$1" >> "$env_file"
+  } always {
+    _gwt_release_lock "$lockfile"
+  }
   return 0
 }

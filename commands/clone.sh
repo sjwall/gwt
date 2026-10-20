@@ -149,12 +149,14 @@ _gwt_clone() {
   source "$gwt_dir/utils/file-lock.sh"
   _gwt_acquire_lock "$lockfile" || return 1
 
-  mkdir -p "$config_dir"
-  if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$repo_path" "$repos_file" 2>/dev/null; then
-    echo "$repo_path" >> "$repos_file"
-  fi
-
-  _gwt_release_lock "$lockfile"
+  {
+    mkdir -p "$config_dir"
+    if [[ ! -f "$repos_file" ]] || ! grep -Fxq "$repo_path" "$repos_file" 2>/dev/null; then
+      echo "$repo_path" >> "$repos_file"
+    fi
+  } always {
+    _gwt_release_lock "$lockfile"
+  }
 
   echo "Tracked repository: $repo_path"
 

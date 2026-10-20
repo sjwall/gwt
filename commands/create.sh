@@ -93,7 +93,6 @@ _gwt_create() {
 
   source "$gwt_dir/commands/env-sync.sh"
   _gwt_env_sync
-  unfunction _gwt_env_sync 2>/dev/null
 
   if [[ "$skip_install" -eq 0 ]]; then
     source "$gwt_dir/utils/pull-dependencies.sh"

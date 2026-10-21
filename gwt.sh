@@ -205,11 +205,6 @@ gwt() {
         source "$gwt_dir/commands/env.sh"
         _gwt_env "$@"
         ;;
-      prune)
-        shift
-        source "$gwt_dir/commands/prune.sh"
-        _gwt_prune "$@"
-        ;;
       add)
         shift
         source "$gwt_dir/commands/create.sh"

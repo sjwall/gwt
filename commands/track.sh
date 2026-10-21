@@ -19,6 +19,10 @@ _gwt_track() {
   if [[ ${#flags[@]} -eq 0 ]]; then
     source "$gwt_dir/commands/track-add.sh"
     _gwt_track_add $args
+  elif [[ ${flags[1]} == "--prune" ]]; then
+    flags[1]=()
+    source "$gwt_dir/commands/track-prune.sh"
+    _gwt_track_prune $flags $args
   else
     echo "gwt: unknown command: track ${flags[*]} ${args[*]}" >&2
     return 59

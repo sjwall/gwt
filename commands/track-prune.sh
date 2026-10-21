@@ -1,5 +1,5 @@
 #!/bin/zsh
-_gwt_prune() {
+_gwt_track_prune() {
   local target_repo=""
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt"
   local repos_file="$config_dir/repos"

@@ -88,6 +88,7 @@
 #   56 - devcon: not inside a git repository
 #   57 - devcon: devcontainer.json file not found
 #   58 - env: not inside a git repository
+#   59 - track: unknown argument
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   # TODO: Detect this

@@ -186,6 +186,7 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `56` | `devcon` | Not inside a git repository.
 | `57` | `devcon` | devcontainer.json file not found.
 | `58` | `env` | Not inside a git repository.
+| `59` | `track` | Unknown argument.
 |===
 
 == License

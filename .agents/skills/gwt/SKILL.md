@@ -361,3 +361,4 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `56` | `devcon` | Not inside a git repository.
 | `57` | `devcon` | devcontainer.json file not found. |
 | `58` | `env` | Not inside a git repository.
+| `59` | `track` | Unknown command.

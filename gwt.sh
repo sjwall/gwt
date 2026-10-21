@@ -221,7 +221,10 @@ gwt() {
         ;;
     esac
   } always {
-    unfunction -- ${(M)${(k)functions}:#_gwt_*}
+    local gwt_functions=${(M)${(k)gwt_functions}:#_gwt_*}
+    if [[ -n "$gwt_functions" ]]; then
+      unfunction -- ${gwt_functions}
+    fi
   }
 }
 

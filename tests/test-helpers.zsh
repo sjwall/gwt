@@ -102,6 +102,19 @@ assert_stdout_empty() {
     _assert_fail "expected empty stdout" "actual: $run_stdout"
 }
 
+assert_file_contains() {
+  local file=$1 needle=$2 content
+  [[ -f "$file" ]] || _assert_fail "file not found: $file"
+  content=$(<"$file")
+  [[ "$content" == *"$needle"* ]] ||
+    _assert_fail "expected $file to contain: $needle" "actual: $content"
+}
+
+assert_file_absent() {
+  local file=$1
+  [[ ! -e "$file" ]] || _assert_fail "expected file to be absent: $file"
+}
+
 assert_pwd() {
   local expected=${1:A} actual=${PWD:A}
   [[ "$expected" == "$actual" ]] ||
@@ -147,4 +160,81 @@ add_worktree() {
 track_repo() {
   mkdir -p "$XDG_CONFIG_HOME/gwt"
   print -r -- "$1" >> "$XDG_CONFIG_HOME/gwt/repos"
+}
+
+# ---------------------------------------------------------------------------
+# Fake IDE / agent launchers
+# ---------------------------------------------------------------------------
+
+# fake_cmd <name> -> prints the log path
+# Creates a stub command on $PATH that appends "<cwd> <args...>" to a log
+# file, so launch assertions can be made without launching anything real.
+fake_cmd() {
+  local name=$1
+  local log="$SANDBOX/bin/$name.log"
+
+  cat > "$SANDBOX/bin/$name" <<EOF || _assert_fail "failed to write fake command $name"
+#!/bin/sh
+printf '%s\n' "\$(pwd) \$*" >> "$log"
+EOF
+  chmod +x "$SANDBOX/bin/$name"
+
+  print -r -- "$log"
+}
+
+# fake_ide [name] -> prints the log path; also configures gwt to launch it,
+# overriding the sandbox's GWT_IDE=none.
+fake_ide() {
+  local name=${1:-fake-ide}
+  gwt config set ide "$name" >/dev/null
+  fake_cmd "$name"
+}
+
+# fake_agent [name] -> prints the log path; also configures gwt to launch it,
+# overriding the sandbox's GWT_AGENT=none.
+fake_agent() {
+  local name=${1:-fake-agent}
+  gwt config set agent "$name" >/dev/null
+  fake_cmd "$name"
+}
+
+# ---------------------------------------------------------------------------
+# Remote fixtures
+# ---------------------------------------------------------------------------
+
+# make_origin_repo <name> -> prints the clone path
+# Creates a bare "origin" at $SANDBOX/origins/<name>.git and a working clone
+# at $SANDBOX/repos/<name> with an initial commit on main, so commands that
+# fetch from origin (pull, clone) have a remote.
+make_origin_repo() {
+  local name=$1
+  local origin="$SANDBOX/origins/$name.git"
+  local repo="$SANDBOX/repos/$name"
+
+  mkdir -p "$SANDBOX/origins"
+  _run_ok git init -q --bare "$origin"
+  _run_ok git -c init.defaultBranch=main init -q "$repo"
+  _run_ok git -C "$repo" config user.name "gwt tests"
+  _run_ok git -C "$repo" config user.email "gwt-tests@example.com"
+  echo init > "$repo/file.txt"
+  _run_ok git -C "$repo" add file.txt
+  _run_ok git -C "$repo" commit -qm initial
+  _run_ok git -C "$repo" remote add origin "$origin"
+  _run_ok git -C "$repo" push -q -u origin main
+
+  print -r -- "$repo"
+}
+
+# push_branch <repo> <branch> -> commits a file on <branch> and pushes it to
+# origin, so `gwt pull <branch>` has something to fetch.
+push_branch() {
+  local repo=$1 branch=$2
+  local prev=$(git -C "$repo" rev-parse --abbrev-ref HEAD)
+
+  _run_ok git -C "$repo" checkout -q -b "$branch"
+  echo "$branch" > "$repo/branch.txt"
+  _run_ok git -C "$repo" add branch.txt
+  _run_ok git -C "$repo" commit -qm "add $branch"
+  _run_ok git -C "$repo" push -q origin "$branch"
+  _run_ok git -C "$repo" checkout -q "$prev"
 }

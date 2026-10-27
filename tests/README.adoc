@@ -44,8 +44,12 @@ Helpers in `test-helpers.zsh`:
 * `invoke_gwt <args...>` runs `gwt` in the current shell (so `cd` persists) and
   sets `run_status`, `run_stdout`, `run_stderr`, `run_output`.
 * Fixtures: `make_repo <name>`, `add_worktree <repo> <name>`,
-  `track_repo <path>`.
+  `track_repo <path>`, `make_origin_repo <name>` (bare origin + clone),
+  `push_branch <repo> <branch>` (commit + push a branch to origin).
+* Fake launchers: `fake_cmd <name>` (stub command logging `<cwd> <args...>`),
+  `fake_ide [name]`, `fake_agent [name]` (also set the `gwt` config).
 * Assertions: `assert_status`, `assert_eq`, `assert_contains`,
-  `assert_not_contains`, `assert_stdout_empty`, `assert_pwd`.
+  `assert_not_contains`, `assert_stdout_empty`, `assert_pwd`,
+  `assert_file_contains`, `assert_file_absent`.
 
 Assertions print diagnostics and exit the test subshell on failure.

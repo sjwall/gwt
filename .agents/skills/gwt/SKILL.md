@@ -172,7 +172,12 @@ gwt t
 # Track a specific repository path:
 gwt track /path/to/repo
 gwt t /path/to/repo
+
+# Track all git repositories found in subdirectories of the current directory:
+gwt track --explore
 ```
+
+`--explore` exits with code `60` if the current directory is already inside a git repository.
 
 ### 9. Clone a Repository
 Clones a repository using `git clone` with the provided arguments and automatically tracks it. Supports the same IDE/agent options as other commands.
@@ -339,7 +344,7 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `34` | `upgrade` | `gwt` repository not found at target directory. |
 | `35` | `upgrade` | `git pull` command failed during upgrade. |
 | `36` | `track` | Not inside a git repository and no repository specified. |
-| `37` | `track` | Invalid argument count (more than 1 argument provided). |
+| `37` | `track` | Invalid argument count (more than 1 argument provided, or arguments provided with `--explore`). |
 | `38` | `track` | Specified path is not a git repository. |
 | `39` | `clone` | Invalid argument count (no arguments provided). |
 | `40` | `clone` | `git clone` command failed. |
@@ -362,3 +367,4 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `57` | `devcon` | devcontainer.json file not found. |
 | `58` | `env` | Not inside a git repository.
 | `59` | `track` | Unknown command.
+| `60` | `track` | `--explore` run from inside a git repository.

@@ -18,6 +18,8 @@
 #  gwt rm -force [NAME]        as above but with force
 #  gwt rm -f [NAME]            as above
 #  gwt track [PATH]            track git repository (defaults to current repository)
+#  gwt track --prune [--dry-run] clean the tracked list to only ones which exist
+#  gwt track --explore         track all git repositories found in subdirectories of the current directory
 #  gwt t [PATH]                as above
 #  gwt clone [args...]         clone a repository with git clone and track it
 #  gwt config [KEY] [VAL]      get or set configuration (e.g. gwt config ide code)
@@ -66,7 +68,7 @@
 #   34 - upgrade: gwt repository not found at target directory
 #   35 - upgrade: git pull failed during upgrade
 #   36 - track: not inside a git repository and no repository specified
-#   37 - track: invalid argument count (more than 1 argument provided)
+#   37 - track: invalid argument count (more than 1 argument provided, or arguments provided with --explore)
 #   38 - track: specified path is not a git repository
 #   39 - clone: invalid argument count (no arguments provided)
 #   40 - clone: git clone command failed
@@ -89,6 +91,7 @@
 #   57 - devcon: devcontainer.json file not found
 #   58 - env: not inside a git repository
 #   59 - track: unknown argument
+#   60 - track: --explore run from inside a git repository
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   # TODO: Detect this

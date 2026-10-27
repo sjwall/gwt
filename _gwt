@@ -104,6 +104,9 @@ _gwt() {
           ;;
         track|t)
           _arguments \
+            '--explore[Track all git repositories found in subdirectories of the current directory]' \
+            '--prune[Remove tracked repositories that no longer exist]' \
+            '--dry-run[Show repositories that would be removed by --prune]' \
             '1:repository:_files -/' && return 0
           ;;
         config)

@@ -75,7 +75,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 * `gwt agent [--agent <agent>] <name>` / `gwt a [--agent <agent>] <name>`: Switch to a worktree matching `<name>` and launch configured agent (prompts for agent command on first run if not configured; supports `--agent <agent>` or `--agent none`).
 * `gwt ls [<name>]` / `gwt list [<name>]`: List tracked worktrees (optionally filtered by repository `<name>`).
 * `gwt remove [<name>]` / `gwt rm [<name>]`: Remove worktree (defaults to current worktree when run from within one; changes directory to the main repository and removes the worktree). `-f` or `-force` supported.
-* `gwt track [<path>] | gwt track --prune [--dry-run]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository).
+* `gwt track [<path>] | gwt track --explore | gwt track --prune [--dry-run]` / `gwt t [<path>]`: Track a git repository (defaults to the current repository). `--explore` searches subdirectories of the current directory for git repositories and tracks them, skipping any directory once a repository is found. `--prune` cleans up the tracked list.
 * `gwt clone [--ide <ide>] [--agent [<agent>] | -a [<agent>]] [--no-install] [git clone args...]`: Clone a repository using `git clone` with the provided arguments and automatically track it. Supports the same IDE/agent options as `add` (e.g. `gwt clone https://github.com/user/repo.git`, `gwt clone --ide code https://github.com/user/repo.git mydir`).
 * `gwt config [key] [value]` / `gwt ide [name]`: View or set configuration options (e.g. `gwt config ide code` or `gwt ide code`). Configured IDE defaults to `nvim`.
 * `gwt skills [<targets>]`: Manage global agent skill symlinks (e.g. `gwt skills claude,gemini`, `gwt skills all`, `gwt skills none`, or `gwt skills list`). When run without arguments in an interactive terminal, prompts to select which agents to link (showing currently linked agents as default). Supports `-n` / `--dry-run` to preview changes.
@@ -164,7 +164,7 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `34` | `upgrade` | `gwt` repository not found at target directory.
 | `35` | `upgrade` | `git pull` command failed during upgrade.
 | `36` | `track` | Not inside a git repository and no repository specified.
-| `37` | `track` | Invalid argument count (more than 1 argument provided).
+| `37` | `track` | Invalid argument count (more than 1 argument provided, or arguments provided with `--explore`).
 | `38` | `track` | Specified path is not a git repository.
 | `39` | `clone` | invalid argument count (no arguments provided)
 | `40` | `clone` | git clone command failed
@@ -187,6 +187,7 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `57` | `devcon` | devcontainer.json file not found.
 | `58` | `env` | Not inside a git repository.
 | `59` | `track` | Unknown argument.
+| `60` | `track` | `--explore` run from inside a git repository.
 |===
 
 == License

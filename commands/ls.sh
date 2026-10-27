@@ -46,7 +46,7 @@ _gwt_ls() {
     return 0
   elif [[ ${#args[@]} -gt 1 ]]; then
     echo "gwt: unknown command: 'list ${args[*]}'" >&2
-    return 39
+    return 43
   fi
 
   local query="${args[1]}"
@@ -81,7 +81,7 @@ _gwt_ls() {
     for m in "${exact_matches[@]}"; do
       echo "  $m" >&2
     done
-    return 40
+    return 44
   elif [[ ${#matches[@]} -eq 1 ]]; then
     target_repos=("${matches[1]}")
   elif [[ ${#matches[@]} -gt 1 ]]; then
@@ -89,7 +89,7 @@ _gwt_ls() {
     for m in "${matches[@]}"; do
       echo "  $m" >&2
     done
-    return 41
+    return 45
   elif [[ ${#path_matches[@]} -eq 1 ]]; then
     target_repos=("${path_matches[1]}")
   elif [[ ${#path_matches[@]} -gt 1 ]]; then
@@ -97,10 +97,10 @@ _gwt_ls() {
     for m in "${path_matches[@]}"; do
       echo "  $m" >&2
     done
-    return 42
+    return 46
   else
     echo "gwt: no matching repository found for '$query'" >&2
-    return 43
+    return 47
   fi
 
   for repo in "${target_repos[@]}"; do

@@ -12,6 +12,7 @@ A lightweight CLI tool to simplify creating, switching, and managing Git worktre
 - **`./.agents/skills/gwt`**: Skill for agents using this tool.
 - **`./commands/`**: The source for each command and any autocompletion.
 - **`./utils/`**: Shared utilities across all commands.
+- **`./tests/`**: Dependency-free Zsh test harness; run with `./tests/run.zsh` (see `tests/README.adoc`).
 
 ## Key Conventions & Agent Guidelines
 

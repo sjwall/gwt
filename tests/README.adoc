@@ -1,0 +1,51 @@
+= gwt tests
+
+Dependency-free Zsh test harness. Tests source the real `gwt.sh` and run
+against throwaway git repositories, so `cd`, config files, and worktrees are
+exercised end to end without touching your real `~/.config/gwt`.
+
+== Running
+
+[source,sh]
+----
+./tests/run.zsh                    # all tests/*.test.zsh
+./tests/run.zsh tests/cd.test.zsh  # one file
+GWT_TEST_KEEP=1 ./tests/run.zsh    # keep sandboxes for debugging
+----
+
+Output is TAP-like: `ok - <name>` / `not ok - <name>` with `#` diagnostics,
+followed by a `1..N` plan. The runner exits non-zero if anything fails.
+
+== Writing tests
+
+Add a `tests/<area>.test.zsh` file with functions named `test_<description>`.
+Underscores become spaces in the output.
+
+[source,zsh]
+----
+test_cd_matches_a_unique_substring() {
+  local repo=$(make_repo demo)
+  local wt=$(add_worktree "$repo" feature-login)
+  cd "$repo"
+
+  invoke_gwt cd login
+
+  assert_status 0
+  assert_pwd "$wt"
+}
+----
+
+Each test runs in its own subshell after `setup_sandbox`, which isolates
+`HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `GWT_DIR`, `PATH`, and `$PWD`.
+`GWT_IDE=none` and `GWT_AGENT=none` are exported so nothing launches.
+
+Helpers in `test-helpers.zsh`:
+
+* `invoke_gwt <args...>` runs `gwt` in the current shell (so `cd` persists) and
+  sets `run_status`, `run_stdout`, `run_stderr`, `run_output`.
+* Fixtures: `make_repo <name>`, `add_worktree <repo> <name>`,
+  `track_repo <path>`.
+* Assertions: `assert_status`, `assert_eq`, `assert_contains`,
+  `assert_not_contains`, `assert_stdout_empty`, `assert_pwd`.
+
+Assertions print diagnostics and exit the test subshell on failure.

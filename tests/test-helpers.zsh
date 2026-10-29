@@ -157,9 +157,13 @@ add_worktree() {
 }
 
 # track_repo <path> -> records a repo as tracked in the sandbox config
+_repos_file() {
+  print -r -- "$XDG_CONFIG_HOME/gwt/repos"
+}
+
 track_repo() {
   mkdir -p "$XDG_CONFIG_HOME/gwt"
-  print -r -- "$1" >> "$XDG_CONFIG_HOME/gwt/repos"
+  print -r -- "$1" >> "$(_repos_file)"
 }
 
 # ---------------------------------------------------------------------------
@@ -212,7 +216,7 @@ make_origin_repo() {
   local repo="$SANDBOX/repos/$name"
 
   mkdir -p "$SANDBOX/origins"
-  _run_ok git init -q --bare "$origin"
+  _run_ok git -c init.defaultBranch=main init -q --bare "$origin"
   _run_ok git -c init.defaultBranch=main init -q "$repo"
   _run_ok git -C "$repo" config user.name "gwt tests"
   _run_ok git -C "$repo" config user.email "gwt-tests@example.com"

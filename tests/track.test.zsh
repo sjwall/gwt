@@ -9,10 +9,6 @@
 #   59 - unknown argument
 #   60 - --explore run from inside a git repository
 
-_repos_file() {
-  print -r -- "$XDG_CONFIG_HOME/gwt/repos"
-}
-
 test_track_tracks_current_repository() {
   local repo=$(make_repo demo)
   cd "$repo"

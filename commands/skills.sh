@@ -10,7 +10,7 @@ _gwt_skills() {
 
   if [[ ! -f "$gwt_dir/skills.sh" ]]; then
     echo "gwt: skills helper not found at $gwt_dir/skills.sh" >&2
-    return 47
+    return 51
   fi
 
   sh "$gwt_dir/skills.sh" --dir="$gwt_dir" "$@"

@@ -115,6 +115,14 @@ assert_file_absent() {
   [[ ! -e "$file" ]] || _assert_fail "expected file to be absent: $file"
 }
 
+assert_symlink() {
+  local link=$1 target=$2 actual
+  [[ -L "$link" ]] || _assert_fail "expected symlink: $link"
+  actual=$(readlink "$link")
+  [[ "$actual" == "$target" ]] ||
+    _assert_fail "expected symlink target: $target" "actual: $actual"
+}
+
 assert_pwd() {
   local expected=${1:A} actual=${PWD:A}
   [[ "$expected" == "$actual" ]] ||

@@ -152,8 +152,16 @@ test_devcon_warns_when_docker_is_not_installed() {
 { "name": "myproj" }
 EOF
   cd "$repo"
-  # keep the PATH free of docker (the host may have one installed)
-  PATH="$SANDBOX/bin:/usr/bin:/bin" invoke_gwt devcon
+  # CI runners and hosts may have a real docker on PATH (e.g. /usr/bin/docker
+  # on ubuntu, where /bin is a symlink to /usr/bin), so PATH trimming alone
+  # cannot hide it. Shim `command` instead so the docker lookup fails.
+  command() {
+    if [[ "$1" == -v && "$2" == docker ]]; then
+      return 1
+    fi
+    builtin command "$@"
+  }
+  invoke_gwt devcon
 
   assert_status 0
   assert_contains "$run_stdout" "gwt: docker is not installed, unable to create volume."

@@ -175,6 +175,12 @@ gwt t /path/to/repo
 
 # Track all git repositories found in subdirectories of the current directory:
 gwt track --explore
+
+# Clean up the tracked list (removes repositories that no longer exist):
+gwt track --prune
+
+# Preview prune without removing anything:
+gwt track --prune --dry-run
 ```
 
 `--explore` exits with code `60` if the current directory is already inside a git repository.
@@ -239,14 +245,45 @@ gwt migrate -n
 gwt migrate
 ```
 
-### 12. Upgrade `gwt`
+### 12. Manage Agent Skill Symlinks
+Manages the bundled `gwt` agent skill symlinks in global agent configurations (`agents`, `opencode`, `claude`, `gemini`). When run without arguments in an interactive terminal, prompts to select which agents to link (showing currently linked agents as default).
+
+```bash
+# Link skills to specific agents:
+gwt skills claude,gemini
+
+# Link skills to all supported agents:
+gwt skills all
+
+# Remove all skill symlinks:
+gwt skills none
+
+# Show currently linked skills:
+gwt skills list
+
+# Preview changes without modifying files:
+gwt skills -n
+# or:
+gwt skills --dry-run
+```
+
+### 13. Configure Devcontainer Setup
+Configures the current repository to work with devcontainers and `gwt`.
+
+```bash
+gwt devcon
+```
+
+Exits with code `57` if no `devcontainer.json` file is found.
+
+### 14. Upgrade `gwt`
 Upgrades the `gwt` repository via `git pull` and re-sources `gwt.sh`.
 
 ```bash
 gwt upgrade
 ```
 
-### 13. Manage Environment Files
+### 15. Manage Environment Files
 Manage environment files for worktrees. Environment files are tracked configuration files (like `.env`, `.env.local`, etc.) that can be synced from the main repository to worktrees.
 
 ```bash
@@ -268,19 +305,28 @@ gwt env sync ~/a/path
 
 # Remove a specific environment file from tracking:
 gwt env remove .env
+# or:
+gwt env rm .env
 
 # Remove all environment files from tracking:
 gwt env remove
+# or:
+gwt env rm
 
 # Remove from user config:
 gwt env remove -u .env
+
+# Remove the entire user-level tracking list for the current repository:
+gwt env remove -u
 ```
+
+Removal untracks entries only — the actual `.env` files on disk are left untouched. Without `-u`, removal targets the local tracking list (`<repo>/.gwt/envs`); with `-u`, it targets the user-level list for the current repository.
 
 ---
 
 ## Configuration & Storage Locations
 
-* **Tracked repositories**: `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`, can be cleaned with `gwt prune`
+* **Tracked repositories**: `${XDG_CONFIG_HOME:-~/.config}/gwt/repos`, can be cleaned with `gwt track --prune`
 * **Custom worktree parent locations**: `${XDG_CONFIG_HOME:-~/.config}/gwt/locations`
 * **Configuration settings**: `${XDG_CONFIG_HOME:-~/.config}/gwt/config`
 
@@ -366,5 +412,6 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `56` | `devcon` | Not inside a git repository.
 | `57` | `devcon` | devcontainer.json file not found. |
 | `58` | `env` | Not inside a git repository.
-| `59` | `track` | Unknown command.
+| `59` | `track` | Unknown argument.
 | `60` | `track` | `--explore` run from inside a git repository.
+| `61` | `env` | Missing or unknown subcommand. |

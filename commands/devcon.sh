@@ -2,7 +2,7 @@
 _gwt_devcon() {
   if [[ -z "$main_repo" ]]; then
     echo "gwt: not inside a git repository" >&2
-    return 52
+    return 56
   fi
 
   source "$gwt_dir/commands/track.sh"
@@ -17,7 +17,7 @@ _gwt_devcon() {
 
   if [[ -z "$configFile" ]] then
     echo "gwt: no devcontainer configuration. Please setup first."
-    return 53
+    return 57
   fi
 
   local gwtName="gwt-$(jq -r '.name' $configFile)"

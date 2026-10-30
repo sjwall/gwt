@@ -18,10 +18,10 @@ _gwt_env_sync() {
     env_file="$config_dir/$repo_name"
   fi
 
-  local env_src=$main_repo
+  local env_src="$main_repo"
   if [[ -n "$1" ]]; then
+    env_src="$1"
     echo "gwt: using source dir $env_src"
-    $env_src=$1
   fi
 
   if [[ -f "$env_file" ]]; then

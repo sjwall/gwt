@@ -24,18 +24,18 @@ _gwt_migrate() {
 
   if [[ ${#args[@]} -gt 0 ]]; then
     echo "gwt: unknown command: 'migrate ${args[*]}'" >&2
-    return 49
+    return 53
   fi
 
   if [[ -z "$main_repo" ]]; then
     echo "gwt: not inside a git repository" >&2
-    return 48
+    return 52
   fi
 
   local dir_gwt
-  dir_gwt=$(_gwt_get_dir_gwt) || return 50
+  dir_gwt=$(_gwt_get_dir_gwt) || return 54
   if [[ -z "$dir_gwt" ]]; then
-    return 50
+    return 54
   fi
 
   local target_base
@@ -158,7 +158,7 @@ _gwt_migrate() {
     move_cmd+=("$src" "$dest")
     if ! "${move_cmd[@]}"; then
       echo "gwt: failed to move worktree '$src' to '$dest'" >&2
-      return 51
+      return 55
     fi
 
     if [[ "$orig_pwd" == "$src" ]]; then

@@ -1,6 +1,21 @@
 = gwt
 
-A git worktree helper...
+A Zsh tool that wraps https://git-scm.com/docs/git-worktree[git worktrees]. It provides a fixed on-disk layout, navigation between a repository's main checkout and its worktrees, and automatic setup of each new worktree.
+
+== How it works
+
+* Worktrees live next to the main repository at `../gwt-<dir-name>/<name>` — a branch called `feature-x` in a repository named `my-repo` is at `../gwt-my-repo/feature-x`.
+* Repositories are recorded in a tracked list, so worktrees can be found and switched to from anywhere, not just from within the current repository.
+* Creating or switching to a worktree changes directory into it, runs `yarn` when a `yarn.lock` is present, and launches your configured IDE or agent.
+* Repositories checked out in unsuitable locations (such as hidden directories like `~/.local`) prompt for a worktree parent directory, remembered per-repository.
+
+== Features
+
+* Worktree creation, switching, and removal (`add`, `pull`, `switch`, `cd`, `main`, `remove`).
+* Launches your configured IDE (defaults to `nvim`) or agent into a worktree; suppress with `--ide none` or `--agent none` for scripted use.
+* Track, list, and prune repositories; clone and track in one step (`track`, `list`, `clone`).
+* Environment file sync across worktrees (`env`), moving worktrees to the expected layout (`migrate`), and devcontainer setup (`devcon`).
+* Bundled agent skill for coding agents and built-in Zsh autocompletion.
 
 == Installation
 

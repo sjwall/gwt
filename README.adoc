@@ -203,6 +203,7 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `58` | `env` | Not inside a git repository.
 | `59` | `track` | Unknown argument.
 | `60` | `track` | `--explore` run from inside a git repository.
+| `61` | `env` | Missing or unknown subcommand.
 |===
 
 == License

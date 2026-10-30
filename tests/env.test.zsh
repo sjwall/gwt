@@ -9,9 +9,10 @@
 #   3. $main_repo/.gwt/envs                   (fallback)
 #
 # Exit code contract:
-#   0  - success (also for "nothing to remove", missing tracked files, unknown
-#        subcommands, and `env sync <path>` despite its broken source override)
+#   0  - success (also for "nothing to remove", missing tracked files, and
+#        `env sync <path>` despite its broken source override)
 #   58 - not inside a git repository (all subcommands)
+#   61 - missing or unknown subcommand
 
 # ---------------------------------------------------------------------------
 # Exit code 58: not inside a git repository
@@ -332,17 +333,27 @@ test_env_sync_with_explicit_source_path_uses_given_dir() {
   assert_not_contains "$(<"$wt/.env")" "SECRET=1"
 }
 
-# There is no unknown-subcommand error: anything unrecognised falls through
-# to sync, so `gwt env bogus` behaves like `gwt env sync bogus`.
-test_env_unknown_subcommand_falls_through_to_sync() {
+# There is no fall-through to sync: an unrecognised subcommand is an error.
+test_env_unknown_subcommand_returns_61() {
   local repo=$(make_repo demo)
   local wt=$(add_worktree "$repo" feature)
   cd "$wt"
 
   invoke_gwt env bogus
 
-  assert_status 0
-  assert_contains "$run_output" "gwt: no env configured for demo"
+  assert_status 61
+  assert_contains "$run_stderr" "unknown command: env bogus"
+}
+
+test_env_missing_subcommand_returns_61() {
+  local repo=$(make_repo demo)
+  local wt=$(add_worktree "$repo" feature)
+  cd "$wt"
+
+  invoke_gwt env
+
+  assert_status 61
+  assert_contains "$run_stderr" "missing subcommand"
 }
 
 # ---------------------------------------------------------------------------

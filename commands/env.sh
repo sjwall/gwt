@@ -5,6 +5,12 @@ _gwt_env() {
     return 58
   fi
 
+  if [[ $# -eq 0 ]]; then
+    echo "gwt: missing subcommand" >&2
+    echo "gwt: usage: gwt env [add|list|sync|remove] [args]" >&2
+    return 61
+  fi
+
   case "$1" in
      add)
        shift
@@ -27,8 +33,9 @@ _gwt_env() {
        _gwt_env_remove "$@"
        ;;
      *)
-       source "$gwt_dir/commands/env-sync.sh"
-       _gwt_env_sync "$@"
+       echo "gwt: unknown command: env $1" >&2
+       echo "gwt: usage: gwt env [add|list|sync|remove] [args]" >&2
+       return 61
        ;;
   esac
 }

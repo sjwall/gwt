@@ -6,7 +6,7 @@ _gwt_devcon() {
   fi
 
   source "$gwt_dir/commands/track.sh"
-  _gwt_track()
+  _gwt_track
 
   local configFile=""
   if [ -f ".devcontainer.json" ]; then

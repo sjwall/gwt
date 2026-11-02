@@ -241,12 +241,6 @@ fi
 detect_profile() {
   if [ -n "$ZDOTDIR" ] && [ -f "$ZDOTDIR/.zshrc" ]; then
     echo "$ZDOTDIR/.zshrc"
-  elif [ -f "$HOME/.zshrc" ]; then
-    echo "$HOME/.zshrc"
-  elif [ -f "$HOME/.bashrc" ]; then
-    echo "$HOME/.bashrc"
-  elif [ -f "$HOME/.profile" ]; then
-    echo "$HOME/.profile"
   else
     echo "$HOME/.zshrc"
   fi

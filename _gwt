@@ -21,6 +21,7 @@ _gwt() {
     'main:Change directory to main repository'
     'm:Alias for main'
     'M:Switch to main repository and launch IDE'
+    'Main:Switch to main repository and launch IDE'
     'switch:Switch to worktree and launch IDE'
     's:Alias for switch'
     'agent:Switch to worktree and launch agent'

@@ -12,7 +12,7 @@ _gwt_track_prune() {
 
   if [ -f "$repos_file" ]; then
     source "$gwt_dir/utils/file-lock.sh"
-    _gwt_acquire_lock "$lockfile" || return 1
+    _gwt_acquire_lock "$lockfile" || return 73
 
     {
       if [[ "$dry_run" == "1" ]]; then

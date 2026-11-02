@@ -422,3 +422,9 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `66` | `clone` | Missing required argument for `--agent` option. |
 | `67` | `clone` | Lock acquisition failed. |
 | `68` | `clone` | `cd` into the cloned repository failed. |
+| `69` | `env add` | Lock acquisition failed. |
+| `70` | `env remove` | Lock acquisition failed. |
+| `71` | `track` | Lock acquisition failed. |
+| `72` | `track --explore` | Lock acquisition failed. |
+| `73` | `track --prune` | Lock acquisition failed. |
+| `74` | `gwt` | Lock acquisition failed during startup. |

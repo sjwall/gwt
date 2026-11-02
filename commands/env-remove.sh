@@ -13,7 +13,7 @@ _gwt_env_remove() {
   fi
 
   source "$gwt_dir/utils/file-lock.sh"
-  _gwt_acquire_lock "$lockfile" || return 1
+  _gwt_acquire_lock "$lockfile" || return 70
 
   {
     if [[ -n "$1" ]]; then

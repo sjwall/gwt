@@ -65,7 +65,7 @@ _gwt_track_explore() {
   repos=("${(@o)repos}")
 
   source "$gwt_dir/utils/file-lock.sh"
-  _gwt_acquire_lock "$lockfile" || return 1
+  _gwt_acquire_lock "$lockfile" || return 72
 
   {
     mkdir -p "$config_dir"

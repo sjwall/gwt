@@ -20,7 +20,12 @@ _gwt_devcon() {
     return 57
   fi
 
-  local gwtName="gwt-$(jq -r '.name' $configFile)"
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "gwt: jq is not installed, unable to update the devcontainer configuration." >&2
+    return 62
+  fi
+
+  local gwtName="gwt-$(jq -r '.name' "$configFile")"
   local gwtMount="{\"type\":\"volume\",\"source\":\"$gwtName\",\"target\":\"/workspaces/$gwtName\"}"
 
   local mounts="$(jq '.mounts' $configFile)"
@@ -40,9 +45,9 @@ _gwt_devcon() {
   fi
 
   if command -v docker >/dev/null 2>&1; then
-    local volume="$(docker volume ls --filter name=gwt-wspe --format \"{{.Name}}\")"
-    if [[ -z "$exists" ]]; then
-        docker volume create $gwtName
+    local volume="$(docker volume ls --filter "name=$gwtName" --format '{{.Name}}')"
+    if [[ -z "$volume" ]]; then
+        docker volume create "$gwtName" >/dev/null || return 63
     else
       echo "gwt: docker volume $gwtName already exists."
     fi

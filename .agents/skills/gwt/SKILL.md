@@ -409,9 +409,11 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `53` | `migrate` | Unknown argument or option. |
 | `54` | `migrate` | Failed to determine target worktree directory location. |
 | `55` | `migrate` | `git worktree move` command failed. |
-| `56` | `devcon` | Not inside a git repository.
+| `56` | `devcon` | Not inside a git repository. |
 | `57` | `devcon` | devcontainer.json file not found. |
-| `58` | `env` | Not inside a git repository.
-| `59` | `track` | Unknown argument.
-| `60` | `track` | `--explore` run from inside a git repository.
+| `58` | `env` | Not inside a git repository. |
+| `59` | `track` | Unknown argument. |
+| `60` | `track` | `--explore` run from inside a git repository. |
 | `61` | `env` | Missing or unknown subcommand. |
+| `62` | `devcon` | jq is not installed. |
+| `63` | `devcon` | Docker volume creation command failed. |

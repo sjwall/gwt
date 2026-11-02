@@ -13,7 +13,8 @@
 # Exit code contract:
 #  56 - not inside a git repository
 #  57 - no devcontainer configuration found
-#   1 - docker is present but the volume create fails
+#  62 - jq is not installed
+#  63 - docker is present but the volume create fails
 #
 # All tests stub `docker` on $PATH (the sandbox bin dir comes first), so the
 # host docker daemon is never touched.
@@ -123,6 +124,15 @@ test_devcon_second_run_reports_mount_already_set() {
 EOF
   cd "$repo"
   local docker_log=$(fake_cmd docker)
+  # re-create the stub so `volume ls` reports the volume as already existing
+  cat > "$SANDBOX/bin/docker" <<EOF
+#!/bin/sh
+printf '%s\n' "\$(pwd) \$*" >> "$docker_log"
+if [ "\$1 \$2" = "volume ls" ]; then
+  echo "gwt-myproj"
+fi
+EOF
+  chmod +x "$SANDBOX/bin/docker"
 
   invoke_gwt devcon
   assert_status 0
@@ -140,8 +150,9 @@ EOF
   # the configuration must not gain a duplicate mount entry
   local config=$(<"$repo/.devcontainer/devcontainer.json")
   assert_eq 1 $(grep -c '"source": "gwt-myproj"' "$repo/.devcontainer/devcontainer.json")
+  # the volume lookup must use the name derived from the devcontainer's name
+  assert_contains "$(<"$docker_log")" "volume ls --filter name=gwt-myproj"
   # no new volume create request on the second run
-  assert_contains "$(<"$docker_log")" "volume ls"
   assert_not_contains "$(<"$docker_log")" "volume create"
 }
 
@@ -169,6 +180,28 @@ EOF
   assert_file_contains "$repo/.devcontainer/devcontainer.json" '"source": "gwt-myproj"'
 }
 
+test_devcon_warns_when_jq_is_not_installed() {
+  local repo=$(make_repo demo)
+  mkdir -p "$repo/.devcontainer"
+  cat > "$repo/.devcontainer/devcontainer.json" <<'EOF'
+{ "name": "myproj" }
+EOF
+  cd "$repo"
+  # Shim `command` so the jq lookup fails (mirrors the docker shim above).
+  command() {
+    if [[ "$1" == -v && "$2" == jq ]]; then
+      return 1
+    fi
+    builtin command "$@"
+  }
+  invoke_gwt devcon
+
+  assert_status 62
+  assert_contains "$run_stderr" "gwt: jq is not installed, unable to update the devcontainer configuration."
+  # the devcontainer configuration is left untouched
+  assert_not_contains "$(<"$repo/.devcontainer/devcontainer.json")" "gwt-"
+}
+
 test_devcon_docker_failure_is_reported_as_nonzero_status() {
   local repo=$(make_repo demo)
   mkdir -p "$repo/.devcontainer"
@@ -185,7 +218,7 @@ EOF
 
   invoke_gwt devcon
 
-  assert_status 1
+  assert_status 63
   assert_contains "$run_stdout" "gwt: setting gwt-myproj mount"
 }
 

@@ -94,7 +94,6 @@
 #   60 - track: --explore run from inside a git repository
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
-  # TODO: Detect this
   local gwt_dir="${GWT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gwt}"
   local main_repo=$(git worktree list --porcelain 2>/dev/null | head -n 1 | sed 's/^worktree //')
   local dir_name=$(basename "${main_repo:-$PWD}")

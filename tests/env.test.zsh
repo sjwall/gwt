@@ -311,10 +311,8 @@ test_env_sync_from_worktree_uses_worktree_local_config() {
   assert_file_absent "$wt/.env"
 }
 
-# `env sync <path>` is documented as syncing from another location, but the
-# implementation's `$env_src=$1` is a failed command, not an assignment, so
-# the source directory stays at the main repo. This test pins that ACTUAL
-# behaviour; see the report note about the README discrepancy.
+# `env sync <path>` syncs the tracked environment files from the given source
+# directory into the worktree. This test pins that working behaviour.
 test_env_sync_with_explicit_source_path_uses_given_dir() {
   local repo=$(make_repo demo)
   echo "SECRET=1" > "$repo/.env"

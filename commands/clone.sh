@@ -30,7 +30,7 @@ _gwt_clone() {
       --ide)
         if (( i + 1 > $#raw )); then
           echo "gwt: --ide requires an argument" >&2
-          return 23
+          return 65
         fi
         override_ide="${raw[i+1]}"
         (( i += 2 ))
@@ -53,7 +53,7 @@ _gwt_clone() {
         use_agent=1
         if (( i + 1 > $#raw )); then
           echo "gwt: --agent requires an argument" >&2
-          return 44
+          return 66
         fi
         override_agent="${raw[i+1]}"
         (( i += 2 ))
@@ -147,7 +147,7 @@ _gwt_clone() {
 
   # Track the repository
   source "$gwt_dir/utils/file-lock.sh"
-  _gwt_acquire_lock "$lockfile" || return 1
+  _gwt_acquire_lock "$lockfile" || return 67
 
   {
     mkdir -p "$config_dir"
@@ -161,7 +161,7 @@ _gwt_clone() {
   echo "Tracked repository: $repo_path"
 
   # Change to the cloned repository
-  cd "$repo_path" || return 1
+  cd "$repo_path" || return 68
 
   if [[ "$skip_install" -eq 0 ]]; then
     source "$gwt_dir/utils/pull-dependencies.sh"

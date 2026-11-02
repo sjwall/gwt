@@ -96,6 +96,10 @@
 #   62 - devcon: jq is not installed
 #   63 - devcon: docker volume creation failed
 #   64 - remove: git branch -d command failed
+#   65 - clone: --ide option requires an argument
+#   66 - clone: --agent option requires an argument
+#   67 - clone: lock acquisition failed
+#   68 - clone: cd into the cloned repository failed
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local gwt_dir="${GWT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gwt}"

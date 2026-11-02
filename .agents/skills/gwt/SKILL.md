@@ -418,3 +418,7 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `62` | `devcon` | jq is not installed. |
 | `63` | `devcon` | Docker volume creation command failed. |
 | `64` | `remove` | `git branch -d` command failed. |
+| `65` | `clone` | Missing required argument for `--ide` option. |
+| `66` | `clone` | Missing required argument for `--agent` option. |
+| `67` | `clone` | Lock acquisition failed. |
+| `68` | `clone` | `cd` into the cloned repository failed. |

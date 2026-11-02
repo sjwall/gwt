@@ -4,8 +4,10 @@
 # Exit code contract:
 #   39 - invalid argument count (no arguments provided)
 #   40 - git clone command failed
-#   23 - missing required argument for `--ide` option
-#   44 - missing required argument for `--agent` option (undocumented in README)
+#   65 - missing required argument for `--ide` option
+#   66 - missing required argument for `--agent` option
+#   67 - lock acquisition failed
+#   68 - cd into the cloned repository failed
 
 test_clone_clones_and_tracks_repository() {
   local origin="$SANDBOX/origins/demo.git"
@@ -54,17 +56,17 @@ test_clone_failure_returns_40() {
   assert_contains "$run_stderr" "does-not-exist"
 }
 
-test_clone_missing_ide_argument_returns_23() {
+test_clone_missing_ide_argument_returns_65() {
   invoke_gwt clone --ide
 
-  assert_status 23
+  assert_status 65
   assert_contains "$run_stderr" "--ide requires an argument"
 }
 
-test_clone_missing_agent_argument_returns_44() {
+test_clone_missing_agent_argument_returns_66() {
   invoke_gwt clone --agent
 
-  assert_status 44
+  assert_status 66
   assert_contains "$run_stderr" "--agent requires an argument"
 }
 

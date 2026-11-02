@@ -48,6 +48,67 @@ error() {
   printf "${RED}error:${RESET} %s\n" "$1" >&2
 }
 
+# Download and extract the full repository tree (commands/, utils/, etc.) from
+# a GitHub tarball. Raw per-file downloads cannot enumerate directories, and a
+# hand-maintained file list drifts as files are added. Falls back to the tarball
+# URL override or derives the codeload URL from REPO_URL.
+#
+# Usage: download_gwt_tree <destination-dir>
+# Returns non-zero if the download or extraction fails.
+download_gwt_tree() {
+  _dest="$1"
+  _tmp="${TMPDIR:-/tmp}/gwt-install-$$"
+  ( umask 077 && mkdir -p "$_tmp" ) || return 1
+
+  _cleanup() { rm -rf "$_tmp"; }
+  trap '_cleanup' EXIT INT TERM
+
+  _tarball="$_tmp/gwt.tar.gz"
+  _tarball_url="${GWT_TARBALL_URL:-}"
+  if [ -z "$_tarball_url" ]; then
+    _slug="$(printf '%s\n' "$REPO_URL" | sed -e 's|\.git$||' -e 's|.*github\.com/||')"
+    case "$_slug" in
+      */*) _tarball_url="https://codeload.github.com/$_slug/tar.gz/refs/heads/$BRANCH" ;;
+      *)
+        error "Cannot derive a tarball URL from GWT_REPO_URL='$REPO_URL'."
+        error "Set GWT_TARBALL_URL to a repository tarball, or install git."
+        return 1
+        ;;
+    esac
+  fi
+
+  info "Downloading repository archive from $_tarball_url"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$_tarball_url" -o "$_tarball" || return 1
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$_tarball" "$_tarball_url" || return 1
+  else
+    return 1
+  fi
+
+  tar -xzf "$_tarball" -C "$_tmp" || return 1
+
+  # The archive extracts into a single top-level directory (e.g. gwt-main).
+  _src_dir=""
+  for _d in "$_tmp"/*/; do
+    if [ -d "$_d" ]; then
+      _src_dir="$_d"
+      break
+    fi
+  done
+  if [ -z "$_src_dir" ] || [ ! -f "${_src_dir}gwt.sh" ]; then
+    error "Downloaded archive did not contain the expected gwt files."
+    return 1
+  fi
+
+  mkdir -p "$_dest"
+  # Copy the full tree, including dotfiles (e.g. .agents/skills/gwt/SKILL.md).
+  cp -R "${_src_dir}." "$_dest/" || return 1
+
+  rm -rf "$_tmp"
+  trap - EXIT INT TERM
+}
+
 # Parse command line options
 SKILLS_ARG=""
 DRY_RUN=0
@@ -165,20 +226,11 @@ elif [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/gwt.sh" ]; then
     fi
   else
     info "Existing installation found at $INSTALL_DIR. Updating..."
-    if command -v curl >/dev/null 2>&1; then
-      curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
-      curl -fsSL "$RAW_URL/skills.sh" -o "$INSTALL_DIR/skills.sh" 2>/dev/null || true
-      curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
-      curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
-    elif command -v wget >/dev/null 2>&1; then
-      wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
-      wget -qO "$INSTALL_DIR/skills.sh" "$RAW_URL/skills.sh" 2>/dev/null || true
-      wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
-      wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      wget -qO "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" "$RAW_URL/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
+    if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
+      download_gwt_tree "$INSTALL_DIR" || {
+        error "Failed to download gwt updates. Please install git and try again."
+        exit 1
+      }
     else
       warn "Neither curl nor wget was found to update files. Keeping existing files."
     fi
@@ -201,24 +253,11 @@ else
     if command -v git >/dev/null 2>&1; then
       info "Cloning repository..."
       git clone --depth=1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
-    elif command -v curl >/dev/null 2>&1; then
-      info "Downloading gwt.sh..."
-      mkdir -p "$INSTALL_DIR"
-      curl -fsSL "$RAW_URL/gwt.sh" -o "$INSTALL_DIR/gwt.sh"
-      curl -fsSL "$RAW_URL/skills.sh" -o "$INSTALL_DIR/skills.sh" 2>/dev/null || true
-      curl -fsSL "$RAW_URL/_gwt" -o "$INSTALL_DIR/_gwt" 2>/dev/null || true
-      curl -fsSL "$RAW_URL/README.adoc" -o "$INSTALL_DIR/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      curl -fsSL "$RAW_URL/.agents/skills/gwt/SKILL.md" -o "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
-    elif command -v wget >/dev/null 2>&1; then
-      info "Downloading gwt.sh..."
-      mkdir -p "$INSTALL_DIR"
-      wget -qO "$INSTALL_DIR/gwt.sh" "$RAW_URL/gwt.sh"
-      wget -qO "$INSTALL_DIR/skills.sh" "$RAW_URL/skills.sh" 2>/dev/null || true
-      wget -qO "$INSTALL_DIR/_gwt" "$RAW_URL/_gwt" 2>/dev/null || true
-      wget -qO "$INSTALL_DIR/README.adoc" "$RAW_URL/README.adoc" 2>/dev/null || true
-      mkdir -p "$INSTALL_DIR/.agents/skills/gwt"
-      wget -qO "$INSTALL_DIR/.agents/skills/gwt/SKILL.md" "$RAW_URL/.agents/skills/gwt/SKILL.md" 2>/dev/null || true
+    elif command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
+      download_gwt_tree "$INSTALL_DIR" || {
+        error "Failed to download gwt. Please install git and try again."
+        exit 1
+      }
     else
       error "Neither git, curl, nor wget was found. Please install one of them and try again."
       exit 1
@@ -227,9 +266,14 @@ else
 fi
 
 if [ "$DRY_RUN" -eq 0 ]; then
-  # Verify gwt.sh exists
-  if [ ! -f "$INSTALL_DIR/gwt.sh" ]; then
-    error "Failed to locate $INSTALL_DIR/gwt.sh"
+  # Verify the install is functional: gwt.sh sources commands/*.sh and
+  # utils/*.sh on every invocation, so those directories must exist too.
+  _missing=""
+  [ ! -f "$INSTALL_DIR/gwt.sh" ] && _missing="gwt.sh"
+  [ -z "$_missing" ] && [ ! -d "$INSTALL_DIR/commands" ] && _missing="commands/"
+  [ -z "$_missing" ] && [ ! -d "$INSTALL_DIR/utils" ] && _missing="utils/"
+  if [ -n "$_missing" ]; then
+    error "Install is incomplete: missing $_missing in $INSTALL_DIR"
     exit 2
   fi
 

@@ -114,7 +114,7 @@ curl -sSf https://raw.githubusercontent.com/sjwall/gwt/main/install.sh | sh -s -
 ** `pull` / `p`
 ** `cd`
 ** `main` / `m` / `M`
-** `switch` / `a`
+** `switch` / `s`
 ** `agent` / `a`
 ** `list` / `ls`
 ** `remove` / `rm`

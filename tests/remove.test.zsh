@@ -4,6 +4,7 @@
 # Exit code contract:
 #   13 - cannot remove main repository (a worktree target must be specified)
 #   15 - `git worktree remove` command failed
+#   64 - `git branch -d` command failed
 
 test_remove_from_worktree_removes_and_returns_to_main() {
   local repo=$(make_repo demo)
@@ -117,4 +118,14 @@ test_remove_force_variant_flag_removes_dirty_worktree() {
 
   assert_status 0
   assert_file_absent "$wt"
+}
+
+test_remove_branch_delete_failure_returns_64() {
+  # outside a git repository, the branch deletion in the no-repository path
+  # fails; it must surface as the unique code 64, not the shared code 1
+  cd "$SANDBOX/work"
+
+  invoke_gwt remove
+
+  assert_status 64
 }

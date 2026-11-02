@@ -19,8 +19,8 @@ _gwt_remove() {
   if [[ -z "$main_repo" ]]; then
     local branch_name=$(git rev-parse --abbrev-ref HEAD)
     git worktree remove "${flags[@]}" "${targets[@]}"
-    git branch -d "$branch_name"
-    return $?
+    git branch -d "$branch_name" || return 64
+    return 0
   fi
 
   local current_wt=$(git rev-parse --show-toplevel 2>/dev/null)

@@ -417,3 +417,4 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `61` | `env` | Missing or unknown subcommand. |
 | `62` | `devcon` | jq is not installed. |
 | `63` | `devcon` | Docker volume creation command failed. |
+| `64` | `remove` | `git branch -d` command failed. |

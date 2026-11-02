@@ -38,6 +38,7 @@ _gwt() {
     'skills:Manage agent skill symlinks'
     'migrate:Migrate worktrees to match expected path pattern'
     'upgrade:Upgrade gwt repository'
+    'reload:Reload gwt definitions from disk'
     'devcon:Configure the current repository to work with devcontainers and gwt'
     'env:Manage environment files for worktrees'
   )
@@ -136,6 +137,8 @@ _gwt() {
             '(-f --force -force)'{-f,--force,-force}'[Force move even if worktree is dirty or locked]' && return 0
           ;;
         upgrade)
+          ;;
+        reload)
           ;;
         devcon)
           ;;

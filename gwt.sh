@@ -27,6 +27,7 @@
 #  gwt skills [TARGETS]        manage agent skill symlinks (e.g. gwt skills claude,gemini)
 #  gwt migrate [--dry-run]     migrate worktrees to expected path pattern
 #  gwt upgrade                 upgrade gwt repository (git pull)
+#  gwt reload                  re-source gwt.sh (reload definitions after upgrade)
 #  gwt devcon                  setup the current repository for working with devcontainers and gwt
 #  gwt env [add|list|ls|sync|remove|rm]  manage environment files for worktrees
 #

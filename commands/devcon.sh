@@ -32,13 +32,13 @@ _gwt_devcon() {
   if [ "$mounts" = "null" ] || [ "$mounts" = "[]" ]; then
     echo "gwt: setting $gwtName mount"
     source "$gwt_dir/utils/jq-inplace.sh"
-    _gwt_jq_inplace $configFile ".mounts = [$gwtMount]"
+    _gwt_jq_inplace "$configFile" ".mounts = [$gwtMount]" || return $?
   else
     local exists="$(jq ".mounts[] | select(.source == \"$gwtName\")" $configFile)"
     if [[ -z "$exists" ]]; then
       echo "gwt: appending $gwtName mount"
       source "$gwt_dir/utils/jq-inplace.sh"
-      _gwt_jq_inplace $configFile ".mounts += [$gwtMount]"
+      _gwt_jq_inplace "$configFile" ".mounts += [$gwtMount]" || return $?
     else
       echo "gwt: $gwtName mount already set."
     fi

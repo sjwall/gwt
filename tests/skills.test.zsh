@@ -139,17 +139,56 @@ test_skills_sync_no_links_is_a_no_op() {
   assert_contains "$run_output" "No linked agent skills detected"
 }
 
-test_skills_sync_updates_stale_links() {
-  # A link pointing at an old install path still counts as linked (path
-  # suffix match), and sync rewrites it to the current skills source.
+test_skills_sync_ignores_foreign_gwt_links() {
+  # A link into another checkout is NOT ours (path merely ends in
+  # /.agents/skills/gwt): sync must not detect, rewrite, or remove it.
   mkdir -p "$HOME/.claude/skills"
   ln -s /old/install/.agents/skills/gwt "$HOME/.claude/skills/gwt"
 
   invoke_gwt skills sync
 
   assert_status 0
+  assert_contains "$run_output" "No linked agent skills detected"
+  assert_symlink "$HOME/.claude/skills/gwt" "/old/install/.agents/skills/gwt"
+}
+
+test_skills_sync_adopts_equivalent_path_spellings() {
+  # A link that resolves to our skills dir via a different (symlinked) path
+  # spelling is still ours and gets rewritten to the canonical source.
+  local alias="$SANDBOX/gwt-alias"
+  ln -s "$GWT_DIR" "$alias"
+  mkdir -p "$HOME/.claude/skills"
+  ln -s "$alias/.agents/skills/gwt" "$HOME/.claude/skills/gwt"
+
+  invoke_gwt skills sync
+
+  assert_status 0
   assert_contains "$run_output" "Updating skills symlinks"
   assert_symlink "$HOME/.claude/skills/gwt" "$(_skills_src)"
+}
+
+test_skills_unlink_leaves_foreign_links_alone() {
+  # `none` must not delete a symlink owned by another checkout.
+  mkdir -p "$HOME/.claude/skills"
+  ln -s /other/checkout/.agents/skills/gwt "$HOME/.claude/skills/gwt"
+
+  invoke_gwt skills none
+
+  assert_status 0
+  assert_contains "$run_output" "No agent skills selected or currently linked"
+  assert_symlink "$HOME/.claude/skills/gwt" "/other/checkout/.agents/skills/gwt"
+}
+
+test_skills_link_does_not_clobber_foreign_symlink() {
+  # Linking must not silently replace a symlink it does not own.
+  mkdir -p "$HOME/.claude/skills"
+  ln -s /other/checkout/.agents/skills/gwt "$HOME/.claude/skills/gwt"
+
+  invoke_gwt skills claude
+
+  assert_status 0
+  assert_contains "$run_output" "not managed by this install"
+  assert_symlink "$HOME/.claude/skills/gwt" "/other/checkout/.agents/skills/gwt"
 }
 
 test_skills_sync_ignores_removed_links() {

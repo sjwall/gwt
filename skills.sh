@@ -197,6 +197,33 @@ get_target_dirs() {
   esac
 }
 
+# Resolve a symlink's destination to a physical path. Works even when the
+# destination dangles (e.g. a link to a since-deleted install) by resolving
+# the deepest existing ancestor of the link path.
+resolve_link_dest() {
+  _rl_target="$1"
+  _rl_link="$(readlink "$_rl_target" 2>/dev/null || true)"
+  [ -n "$_rl_link" ] || return 1
+
+  case "$_rl_link" in
+    /*) _rl_abs="$_rl_link" ;;
+    *) _rl_abs="$(dirname "$_rl_target")/$_rl_link" ;;
+  esac
+
+  _rl_dir="$(dirname "$_rl_abs")"
+  _rl_base="$(basename "$_rl_abs")"
+  while [ -n "$_rl_dir" ] && [ "$_rl_dir" != "/" ] && [ "$_rl_dir" != "." ]; do
+    if _rl_phys="$(cd -P "$_rl_dir" 2>/dev/null && pwd -P)"; then
+      echo "$_rl_phys/$_rl_base"
+      return 0
+    fi
+    _rl_base="$(basename "$_rl_dir")/$_rl_base"
+    _rl_dir="$(dirname "$_rl_dir")"
+  done
+
+  echo "$_rl_abs"
+}
+
 is_skill_linked() {
   _dest_dir="$1"
   _skill_src="$2"
@@ -218,11 +245,19 @@ is_skill_linked() {
     fi
   fi
 
-  case "$_link" in
-    */.agents/skills/"$_name"|*/.agents/skills/"$_name"/*)
-      return 0
-      ;;
-  esac
+  # Ownership check: a link is only ours if it resolves into *this*
+  # installation's skills directory. A link that merely ends in
+  # /.agents/skills/<name> may belong to another checkout (fork, source
+  # clone) and must never be silently removed or replaced by this install.
+  _resolved="$(resolve_link_dest "$_target" 2>/dev/null || true)"
+  if [ -n "$_resolved" ]; then
+    _install_phys="$(cd -P "$INSTALL_DIR" 2>/dev/null && pwd -P || true)"
+    case "$_resolved" in
+      "$_install_phys"/.agents/skills/"$_name"|"$INSTALL_DIR"/.agents/skills/"$_name")
+        return 0
+        ;;
+    esac
+  fi
 
   return 1
 }
@@ -351,6 +386,10 @@ symlink_skill() {
       info "Skill '$_name' is already linked in $_disp_target"
       return 0
     fi
+    if ! is_skill_linked "$_dest_dir" "$_src"; then
+      warn "$_disp_target points at '$_current', which is not managed by this install; skipping (remove it manually to re-link)"
+      return 0
+    fi
     if [ "$DRY_RUN" -eq 1 ]; then
       info "Would update symlink: $_disp_target -> $_disp_src"
     else
@@ -384,6 +423,9 @@ unlink_skill() {
       rm -f "$_target"
       success "Removed symlink: $_disp_target"
     fi
+  elif [ -L "$_target" ]; then
+    _current="$(readlink "$_target" 2>/dev/null || true)"
+    warn "$_disp_target points at '$_current', which is not managed by this install; leaving it in place"
   fi
 }
 

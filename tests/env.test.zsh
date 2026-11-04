@@ -331,6 +331,79 @@ test_env_sync_with_explicit_source_path_uses_given_dir() {
   assert_not_contains "$(<"$wt/.env")" "SECRET=1"
 }
 
+# The .gwt/envs config is repo-controlled (it can be committed), so `env sync`
+# must refuse entries that traverse out of the source dir or the worktree
+# instead of cp'ing files from outside the repo.
+test_env_sync_skips_dotdot_traversal_entries() {
+  local repo=$(make_repo demo)
+  echo "TOPSECRET=1" > "$SANDBOX/leak.txt"
+  mkdir -p "$repo/.gwt"
+  print -r -- "../../leak.txt" > "$repo/.gwt/envs"
+  local wt=$(add_worktree "$repo" feature)
+  cd "$wt"
+
+  invoke_gwt env sync
+
+  assert_status 0
+  assert_contains "$run_output" "gwt: WARN skipping unsafe env path: ../../leak.txt"
+  assert_file_absent "$wt/leak.txt"
+  assert_file_contains "$SANDBOX/leak.txt" "TOPSECRET=1"
+}
+
+test_env_sync_skips_absolute_paths() {
+  local repo=$(make_repo demo)
+  echo "TOPSECRET=1" > "$SANDBOX/leak-abs.txt"
+  mkdir -p "$repo/.gwt"
+  print -r -- "$SANDBOX/leak-abs.txt" > "$repo/.gwt/envs"
+  local wt=$(add_worktree "$repo" feature)
+  cd "$wt"
+
+  invoke_gwt env sync
+
+  assert_status 0
+  assert_contains "$run_output" "gwt: WARN skipping unsafe env path: $SANDBOX/leak-abs.txt"
+  assert_file_absent "$wt/leak-abs.txt"
+}
+
+# A committed symlink in the source repo pointing outside it is another way
+# for a repo-controlled config to pull outside files into the worktree.
+test_env_sync_skips_source_symlinks_escaping_the_repo() {
+  local repo=$(make_repo demo)
+  echo "TOPSECRET=1" > "$SANDBOX/leak-src.txt"
+  mkdir -p "$repo/.gwt"
+  ln -s "$SANDBOX/leak-src.txt" "$repo/.env"
+  print -r -- ".env" > "$repo/.gwt/envs"
+  local wt=$(add_worktree "$repo" feature)
+  cd "$wt"
+
+  invoke_gwt env sync
+
+  assert_status 0
+  assert_contains "$run_output" "gwt: WARN skipping env path outside source dir: .env"
+  assert_file_absent "$wt/.env"
+  assert_file_contains "$SANDBOX/leak-src.txt" "TOPSECRET=1"
+}
+
+# A symlinked directory in the worktree would otherwise let the copy write
+# repo content outside the worktree.
+test_env_sync_skips_destination_symlinks_escaping_the_worktree() {
+  local repo=$(make_repo demo)
+  mkdir -p "$repo/pwn"
+  echo "PWNED=1" > "$repo/pwn/pwned.txt"
+  mkdir -p "$repo/.gwt"
+  print -r -- "pwn/pwned.txt" > "$repo/.gwt/envs"
+  local wt=$(add_worktree "$repo" feature)
+  ln -s "$SANDBOX" "$wt/pwn"
+  cd "$wt"
+
+  invoke_gwt env sync
+
+  assert_status 0
+  assert_contains "$run_output" "gwt: WARN skipping env path outside worktree: pwn/pwned.txt"
+  assert_file_absent "$SANDBOX/pwned.txt"
+  assert_file_contains "$repo/pwn/pwned.txt" "PWNED=1"
+}
+
 # There is no fall-through to sync: an unrecognised subcommand is an error.
 test_env_unknown_subcommand_returns_61() {
   local repo=$(make_repo demo)

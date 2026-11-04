@@ -1,4 +1,19 @@
 #!/bin/zsh
+# Returns 0 if $1 is a safe .gwt/envs entry: a non-empty relative path with no
+# ".." component, so it cannot name a file outside the source directory nor a
+# location outside the current worktree. The config file is repo-controlled
+# (it can be committed), so entries must be validated before use.
+_gwt_env_entry_is_safe() {
+  local entry="$1"
+  [[ -n "$entry" ]] || return 1
+  [[ "$entry" != /* ]] || return 1
+  local part
+  for part in ${(s./.)entry}; do
+    [[ "$part" == ".." ]] && return 1
+  done
+  return 0
+}
+
 _gwt_env_sync() {
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gwt/envs"
   local local_config_file="$PWD/.gwt/envs"
@@ -29,17 +44,35 @@ _gwt_env_sync() {
     local -A seen
     local r
     while IFS= read -r r || [[ -n "$r" ]]; do
-      [[ -z "$r" || ! -f "$env_src/$r" ]] && continue
+      if ! _gwt_env_entry_is_safe "$r"; then
+        [[ -n "$r" ]] && echo "gwt: WARN skipping unsafe env path: $r" >&2
+        continue
+      fi
+      [[ ! -f "$env_src/$r" ]] && continue
       [[ -n "${seen[$r]}" ]] && continue
       seen[$r]=1
       env_list+=("$r")
     done < "$env_file"
+    # Symlinked entries (or entries under symlinked directories) can escape
+    # even when the entry itself is lexically safe, so containment is checked
+    # again on the resolved paths at copy time.
+    local src_root="${env_src:A}"
+    local dest_root="${PWD:A}"
     echo "Copying files:"
     for (( i = 1; i <= ${#env_list[@]}; i++ )); do
       echo "${env_list[i]}" >&2
       local item="$env_src/${env_list[i]}"
+      local dest="$PWD/${env_list[i]}"
+      if [[ "${item:A}" != "$src_root"/* ]]; then
+        echo "gwt: WARN skipping env path outside source dir: ${env_list[i]}" >&2
+        continue
+      fi
+      if [[ "${dest:A}" != "$dest_root"/* ]]; then
+        echo "gwt: WARN skipping env path outside worktree: ${env_list[i]}" >&2
+        continue
+      fi
       if [[ -f "$item" ]]; then
-        cp "$item" "$PWD/${env_list[i]}"
+        cp "$item" "$dest"
       else
         echo "gwt: WARN unable to copy env ${env_list[i]}"
       fi

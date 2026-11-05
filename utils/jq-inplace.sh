@@ -19,7 +19,10 @@ _gwt_jq_inplace() {
     if jq "$@" "$file" > "$tmp"; then
         # Preserve the original permissions; mktemp creates mode-0600 files.
         local mode
-        if mode=$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file" 2>/dev/null) \
+        # GNU stat (Linux) uses -c '%a'; BSD stat (macOS) uses -f '%Lp'.
+        # Check GNU first: BSD stat rejects -c, but GNU stat accepts -f as
+        # --file-system and "succeeds" with unusable output.
+        if mode=$(stat -c '%a' "$file" 2>/dev/null || stat -f '%Lp' "$file" 2>/dev/null) \
             && chmod "$mode" "$tmp" \
             && mv -f -- "$tmp" "$file"; then
             tmp=""

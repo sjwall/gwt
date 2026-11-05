@@ -29,8 +29,9 @@ test_preserves_file_permissions() {
   _gwt_jq_inplace "$file" '.name = "renamed"'
   assert_status 0
 
-  # BSD stat (%Lp) and GNU stat (%a) both print the octal mode
-  local mode=$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file")
+  # BSD stat (%Lp) and GNU stat (%a) both print the octal mode; check GNU
+  # first since BSD stat rejects -c but GNU stat accepts -f as --file-system
+  local mode=$(stat -c '%a' "$file" 2>/dev/null || stat -f '%Lp' "$file")
   assert_eq "664" "$mode"
 }
 

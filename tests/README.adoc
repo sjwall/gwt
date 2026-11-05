@@ -16,6 +16,24 @@ GWT_TEST_KEEP=1 ./tests/run.zsh    # keep sandboxes for debugging
 Output is TAP-like: `ok - <name>` / `not ok - <name>` with `#` diagnostics,
 followed by a `1..N` plan. The runner exits non-zero if anything fails.
 
+== Running in Docker
+
+`tests/docker.zsh` runs the suite in a container that matches the GitHub
+Actions environment (`.github/workflows/tests.yml`: Ubuntu with `zsh`, `git`,
+and `jq`), so failures are reproducible locally.
+
+[source,sh]
+----
+./tests/docker.zsh                     # all tests
+./tests/docker.zsh tests/cd.test.zsh   # one file (args pass to run.zsh)
+./tests/docker.zsh --build             # rebuild the image first
+./tests/docker.zsh --shell             # shell inside the test container
+GWT_TEST_KEEP=1 ./tests/docker.zsh     # env vars are passed through
+----
+
+The image is built automatically on first use. The repository is
+bind-mounted at `/workspace`, so edits take effect without rebuilding.
+
 == Writing tests
 
 Add a `tests/<area>.test.zsh` file with functions named `test_<description>`.

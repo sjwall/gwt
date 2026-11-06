@@ -25,20 +25,24 @@ _gwt_devcon() {
     return 62
   fi
 
+  # The devcontainer's "name" field is untrusted input (it comes from the
+  # repository being worked on), so it must be passed to jq as data via
+  # --arg, never interpolated into the jq program string.
   local gwtName="gwt-$(jq -r '.name' "$configFile")"
-  local gwtMount="{\"type\":\"volume\",\"source\":\"$gwtName\",\"target\":\"/workspaces/$gwtName\"}"
 
-  local mounts="$(jq '.mounts' $configFile)"
+  local mounts="$(jq '.mounts' "$configFile")"
   if [ "$mounts" = "null" ] || [ "$mounts" = "[]" ]; then
     echo "gwt: setting $gwtName mount"
     source "$gwt_dir/utils/jq-inplace.sh"
-    _gwt_jq_inplace "$configFile" ".mounts = [$gwtMount]" || return $?
+    _gwt_jq_inplace "$configFile" --arg name "$gwtName" \
+      '.mounts = [{"type": "volume", "source": $name, "target": ("/workspaces/" + $name)}]' || return $?
   else
-    local exists="$(jq ".mounts[] | select(.source == \"$gwtName\")" $configFile)"
+    local exists="$(jq --arg name "$gwtName" '.mounts[] | select(.source == $name)' "$configFile")"
     if [[ -z "$exists" ]]; then
       echo "gwt: appending $gwtName mount"
       source "$gwt_dir/utils/jq-inplace.sh"
-      _gwt_jq_inplace "$configFile" ".mounts += [$gwtMount]" || return $?
+      _gwt_jq_inplace "$configFile" --arg name "$gwtName" \
+        '.mounts += [{"type": "volume", "source": $name, "target": ("/workspaces/" + $name)}]' || return $?
     else
       echo "gwt: $gwtName mount already set."
     fi

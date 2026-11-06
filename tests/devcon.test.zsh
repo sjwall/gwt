@@ -57,6 +57,53 @@ EOF
   assert_file_contains "$docker_log" "volume create gwt-rootproj"
 }
 
+test_devcon_name_with_jq_metacharacters_is_passed_as_data_not_code() {
+  local repo=$(make_repo demo)
+  # A hostile "name" (quotes, backslashes, brackets) must never be spliced
+  # into the jq program; it may only appear as a JSON string value.
+  cat > "$repo/.devcontainer.json" <<'EOF'
+{ "name": "x\"] = [{\"type\": \"bind\"}]; //", "image": "alpine" }
+EOF
+  cd "$repo"
+  fake_cmd docker
+
+  invoke_gwt devcon
+
+  assert_status 0
+  # the name lands in the file as a properly escaped JSON string value
+  assert_file_contains "$repo/.devcontainer.json" '"source": "gwt-x\"] = [{\"type\": \"bind\"}]; //"'
+  # the written config must still be valid JSON with exactly one mount of the
+  # volume type -- an injected program would have produced extra/altered keys
+  local config=$(<"$repo/.devcontainer.json")
+  assert_eq 1 "$(jq '.mounts | length' "$repo/.devcontainer.json")"
+  assert_eq '"volume"' "$(jq -c '.mounts[0].type' "$repo/.devcontainer.json")"
+  assert_eq "gwt-x\"] = [{\"type\": \"bind\"}]; //" "$(jq -r '.mounts[0].source' "$repo/.devcontainer.json")"
+  assert_file_contains "$repo/.devcontainer.json" '"image": "alpine"'
+}
+
+test_devcon_name_with_jq_metacharacters_is_matched_safely_on_second_run() {
+  local repo=$(make_repo demo)
+  mkdir -p "$repo/.devcontainer"
+  cat > "$repo/.devcontainer/devcontainer.json" <<'EOF'
+{ "name": "x\"] = [{\"type\": \"bind\"}]; //", "mounts": [] }
+EOF
+  cd "$repo"
+  fake_cmd docker
+
+  invoke_gwt devcon
+  assert_status 0
+  assert_contains "$run_stdout" "gwt: setting gwt-x\"] = [{\"type\": \"bind\"}]; // mount"
+
+  # the select() filter must find the existing mount without the name ever
+  # being evaluated as jq code
+  invoke_gwt devcon
+
+  assert_status 0
+  assert_contains "$run_stdout" "gwt: gwt-x\"] = [{\"type\": \"bind\"}]; // mount already set."
+  assert_not_contains "$run_stdout" "appending"
+  assert_eq 1 $(grep -c '"source"' "$repo/.devcontainer/devcontainer.json")
+}
+
 test_devcon_uses_nested_devcontainer_devcontainer_json() {
   local repo=$(make_repo demo)
   mkdir -p "$repo/.devcontainer"

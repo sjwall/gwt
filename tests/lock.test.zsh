@@ -8,8 +8,8 @@
 # Exit code contract:
 #  74 - gwt startup lock acquisition failed
 #
-# The subcommand specific lock codes (69-73) are only reachable when the
-# lock appears between the startup release and the subcommand's own
+# The subcommand specific lock codes (67, 69-73, 75) are only reachable when
+# the lock appears between the startup release and the subcommand's own
 # acquire, which cannot be triggered deterministically from the CLI; they
 # share the same acquisition code path as the startup lock tested here.
 

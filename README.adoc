@@ -219,6 +219,7 @@ The `gwt` utility returns `0` upon success and unique non-zero exit codes for sp
 | `72` | `track --explore` | Lock acquisition failed.
 | `73` | `track --prune` | Lock acquisition failed.
 | `74` | `gwt` | Lock acquisition failed during startup.
+| `75` | `env sync` | Lock acquisition failed.
 |===
 
 == License

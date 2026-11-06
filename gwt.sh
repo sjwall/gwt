@@ -107,6 +107,7 @@
 #   72 - track --explore: lock acquisition failed
 #   73 - track --prune: lock acquisition failed
 #   74 - gwt: lock acquisition failed during startup
+#   75 - env sync: lock acquisition failed
 unalias gwt 2>/dev/null || true  #omz git plugin defines `gwt` alias; remove so func wins
 gwt() {
   local gwt_dir="${GWT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/gwt}"

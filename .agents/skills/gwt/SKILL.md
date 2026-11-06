@@ -428,3 +428,4 @@ The `gwt` utility returns `0` on success and unique non-zero exit codes for erro
 | `72` | `track --explore` | Lock acquisition failed. |
 | `73` | `track --prune` | Lock acquisition failed. |
 | `74` | `gwt` | Lock acquisition failed during startup. |
+| `75` | `env sync` | Lock acquisition failed. |

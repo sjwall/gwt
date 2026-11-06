@@ -7,6 +7,12 @@ _gwt_acquire_lock() {
   local lockfile="$1"
   local timeout=${2:-30}
   local start_time=$(date +%s)
+
+  if [[ -z "$lockfile" ]]; then
+    echo "gwt: internal error: no lockfile specified" >&2
+    return 1
+  fi
+
   local lock_dir="$(dirname "$lockfile")"
   
   mkdir -p "$lock_dir"

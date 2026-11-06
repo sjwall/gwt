@@ -4,6 +4,7 @@ _gwt_env_add() {
   local local_config_file="$PWD/.gwt/envs"
   local repo_name=$(basename $main_repo)
   local env_file="$local_config_file"
+  local lockfile="$config_dir/envs.lock"
 
   #
   # User config overrides local only when -u passed
